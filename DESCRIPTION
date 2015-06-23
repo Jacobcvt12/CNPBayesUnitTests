@@ -1,0 +1,46 @@
+Package: CNPBayesUnitTests
+Type: Package
+Title: Bayesian mixture models for copy number polymorphisms long running unit tests
+Version: 0.0.01
+Maintainer: Jacob Carey <jcarey15@jhu.edu>
+Description: Bayesian hierarchical mixture models for batch effects and copy
+    number.
+Date: Tue Jun 23 19:41:00 EST 2015
+Author: Stephen Cristiano, Robert Scharpf, and Jacob Carey
+Depends:
+    Rcpp (>= 0.10.4),
+    RcppArmadillo (>= 0.2.0),
+    BiocGenerics,
+    foreach,
+    GenomicRanges,
+    methods
+Imports:
+    Hmisc,
+    S4Vectors,
+    truncnorm,
+    matrixStats,
+    RColorBrewer,
+    gtools,
+    GenomeInfoDb,
+    msm,
+    HardyWeinberg,
+    oligoClasses,
+    coda,
+    combinat,
+    dplyr,
+    IRanges,
+    mvtnorm,
+    sn
+Suggests:
+    RUnit,
+    knitr,
+    BiocStyle,
+    BSgenome.Hsapiens.UCSC.hg19
+VignetteBuilder: knitr
+License: Artistic-2.0
+LinkingTo: Rcpp, RcppArmadillo
+biocViews: CopyNumberVariation
+Roxygen: list(wrap=FALSE)
+## Local Variables: 
+## time-stamp-pattern: "8/Date: %3a %3b %2d %02H:%02M:%02S %Z %:y\n"
+## End: 
