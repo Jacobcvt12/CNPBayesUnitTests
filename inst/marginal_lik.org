@@ -1,6 +1,7 @@
 * Packages
 
 #+begin_src R :tangle scripts/marginal_lik.R
+library(RUnit)
 library(CNPBayes)
 library(MASS)
 #+end_src 
@@ -11,9 +12,125 @@ library(MASS)
 data(galaxies)
 #+end_src 
 
-* Fit mixture models 
+Correct the 78th observation as in Perrakis /et al./:
 
-#+begin_src R 
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+  galaxies[78] <- 26960
+#+END_SRC
 
 
+  
+* Fit mixture model
+
+Start by fitting the 3 component mixture model
+
+#+begin_src R :tangle scripts/marginal_lik.R
+  mp <- McmcParams(thin=10, iter=1000, burnin=1000)
+  hypp <- Hyperparameters(type="marginal", k=3)
+  model <- MarginalModel(data=galaxies, k=3,
+                         hypp=hypp,
+                         mcmc.params=mp)
+  fit <- posteriorSimulation(model)
 #+end_src
+
+#+BEGIN_SRC R :results value graphics
+  dm <- plot(fit, ylim=c(0, 0.0005), breaks=50)
+#+END_SRC
+
+
+The plot suggests 4 components may be a better fit.
+
+#+BEGIN_SRC R
+  hypp <- Hyperparameters(type="marginal", k=4)
+  model <- MarginalModel(data=galaxies, k=4,
+                         hypp=hypp,
+                         mcmc.params=mp)
+  fit4 <- posteriorSimulation(model)
+  dm4 <- plot(fit4, ylim=c(0, 0.0005), breaks=50)
+#+END_SRC
+
+* Computing the marginal likelihood
+** Using CNPBayes function
+
+Compute the marginal likelihood for the K=3 model and compare to the
+published marginal likellihood for the 3-cluster model with unequal
+variance:
+
+#+BEGIN_SRC R 
+  published.mlik <- "-228.595"
+  x <- computeMarginalLik2(list(fit))$marginal
+  mlik <- x[[1]]["marginal"]
+  print(mlik)
+  tryCatch(checkEquals(as.numeric(mlik), published.mlik, tolerance=3),
+           error=function(e) "CNPBayes estimate not within tolerance")
+#+END_SRC
+
+** Breakdown CNPBayes function into the block updates
+
+We assume that the chain has reached stationarity.  The block updates
+we use for the Chib's estimate of the marginal likelihood involves the
+following steps:
+
+- use the existing chain to estimate $p(\theta^* | y, \sigma^*, \pi^*, z, \ldots)$
+
+where $\theta^*$ is the modal ordinate estimated as $argmax_\theta p(y | \theta, z, \ldots)
+p(\theta)$.
+
+- Run a reduced Gibb's sampler with $\theta^*$ fixed to estimate
+  p(\sigma^* | \theta^*, y, z, \ldots)
+
+- Run a reduced Gibb's sampler with $\theta^*$ and $\pi^*$ fixed at
+  modal ordinates to estimate
+
+  p(\pi^* | \theta^*, \sigma^{2*}, y, z, \ldots)
+
+*** Finding modal ordinates
+
+There are several ways to do this.
+
+#+BEGIN_SRC R
+  modal.ordinates <- modes(fit)
+  print(modal.ordinates)
+  ## Update slots of the paramters in MarginalModel with the modal.ordinates
+  fit2 <- useModes(fit)
+  identical(theta(fit2), modal.ordinates[["theta"]])
+  identical(sigma2(fit2), modal.ordinates[["sigma2"]])
+  ## Find the modal.ordinate using argMax, which looks at log lik *
+  ## prior for each MCMC iteration
+  i <- argMax(fit)
+  thetas <- theta(chains(fit))[i, ]
+  identical(thetas, modal.ordinates[["theta"]])
+#+END_SRC
+
+The log likelihood and log prior at the modal ordinates are
+
+#+BEGIN_SRC R
+  loglik <- log_lik(chains(fit))[i]
+  logprior <- logPrior(chains(fit))[i]
+#+END_SRC
+
+Alternatively, the log likelihood calculation is implemented in C++
+  and could be computed directly for the model at the modal ordinates:
+
+#+BEGIN_SRC R
+  .Call("loglik", fit2)
+#+END_SRC
+
+We can verify this calculation in R and we have a unit test for this in CNPBayes:
+
+#+BEGIN_SRC R
+  yy <- y(fit2)
+  th <- theta(fit2)
+  sd <- sigma(fit2)
+  p_ <- p(fit2)
+  loglikR <- sum(log(p_[1]*dnorm(yy, th[1], sd[1]) + p_[2]*dnorm(yy, th[2], sd[2]) +
+                         p_[3]*dnorm(yy, th[3], sd[3])))
+  loglikR
+#+END_SRC
+
+This number is nowhere near the published marginal likelihood.
+
+
+
+
+
