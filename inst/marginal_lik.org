@@ -1,0 +1,19 @@
+* Packages
+
+#+begin_src R :tangle scripts/marginal_lik.R
+library(CNPBayes)
+library(MASS)
+#+end_src 
+
+* Galaxies data
+
+#+begin_src R :tangle scripts/marginal_lik.R
+data(galaxies)
+#+end_src 
+
+* Fit mixture models 
+
+#+begin_src R 
+
+
+#+end_src
