@@ -25,16 +25,16 @@ Correct the 78th observation as in Perrakis /et al./:
 Start by fitting the 3 component mixture model
 
 #+begin_src R :tangle scripts/marginal_lik.R
-  mp <- McmcParams(thin=10, iter=1000, burnin=1000)
+  mp <- McmcParams(thin=100, iter=1000, burnin=1000)
   hypp <- Hyperparameters(type="marginal", k=3)
-  model <- MarginalModel(data=galaxies, k=3,
+  model <- MarginalModel(data=galaxies/1000, k=3,
                          hypp=hypp,
                          mcmc.params=mp)
   fit <- posteriorSimulation(model)
 #+end_src
 
 #+BEGIN_SRC R :results value graphics
-  dm <- plot(fit, ylim=c(0, 0.0005), breaks=50)
+  dm <- plot(fit, ylim=c(0, 0.4), breaks=50)
 #+END_SRC
 
 
@@ -42,11 +42,11 @@ The plot suggests 4 components may be a better fit.
 
 #+BEGIN_SRC R
   hypp <- Hyperparameters(type="marginal", k=4)
-  model <- MarginalModel(data=galaxies, k=4,
+  model <- MarginalModel(data=galaxies/1000, k=4,
                          hypp=hypp,
                          mcmc.params=mp)
   fit4 <- posteriorSimulation(model)
-  dm4 <- plot(fit4, ylim=c(0, 0.0005), breaks=50)
+  dm4 <- plot(fit4, ylim=c(0, 0.4), breaks=50)
 #+END_SRC
 
 * Computing the marginal likelihood
@@ -65,13 +65,28 @@ variance:
            error=function(e) "CNPBayes estimate not within tolerance")
 #+END_SRC
 
-** Breakdown CNPBayes function into the block updates
+** Steps used in ~CNPBayes~ for marginal likelihood estimation 
 
-We assume that the chain has reached stationarity.  The block updates
-we use for the Chib's estimate of the marginal likelihood involves the
-following steps:
+The target posterior distribution is given by
 
-- use the existing chain to estimate $p(\theta^* | y, \sigma^*, \pi^*, z, \ldots)$
+$$ p(\psi | y ) =  \frac{p(y | \psi) p(\psi)}{m(y)},$$
+where the marginal likelihood is given by $m(y)$.  It follows that
+
+$$ log[m(y)] = log[p(y|\psi)] + log[p(\psi)] - log[p(\psi | y)]$$
+
+for any $\psi$.  The log likelihood and log prior are straightforward
+to compute.  However, estimation of the posterior $p(\psi)|y)$ is more
+challenging.  
+
+** Estimation of $p(\psi | y)$
+
+
+We assume that the chain has reached stationarity.  Following Chib's
+[ref], we estimate $p(\psi|y)$ with block updates using the following
+steps:
+
+- use the existing MCMC chain to estimate $p(\theta^* | y, \sigma^*,
+  \pi^*, z, \ldots)$
 
 where $\theta^*$ is the modal ordinate estimated as $argmax_\theta p(y | \theta, z, \ldots)
 p(\theta)$.
@@ -86,7 +101,7 @@ p(\theta)$.
 
 *** Finding modal ordinates
 
-There are several ways to do this.
+  There are several ways to do this.
 
 #+BEGIN_SRC R
   modal.ordinates <- modes(fit)
@@ -102,21 +117,24 @@ There are several ways to do this.
   identical(thetas, modal.ordinates[["theta"]])
 #+END_SRC
 
-The log likelihood and log prior at the modal ordinates are
+The complete data log likelihood and log prior at the modal ordinates
+are
 
 #+BEGIN_SRC R
   loglik <- log_lik(chains(fit))[i]
   logprior <- logPrior(chains(fit))[i]
 #+END_SRC
 
-Alternatively, the log likelihood calculation is implemented in C++
-  and could be computed directly for the model at the modal ordinates:
+Alternatively, the data log likelihood calculation is implemented in
+  C++ and could be computed directly for the model at the modal
+  ordinates:
 
 #+BEGIN_SRC R
-  .Call("loglik", fit2)
+  (loglikC <- .Call("loglik", fit2))
 #+END_SRC
 
-We can verify this calculation in R and we have a unit test for this in CNPBayes:
+We can verify this calculation in R and there is an existin unit test
+for this in CNPBayes:
 
 #+BEGIN_SRC R
   yy <- y(fit2)
@@ -125,10 +143,10 @@ We can verify this calculation in R and we have a unit test for this in CNPBayes
   p_ <- p(fit2)
   loglikR <- sum(log(p_[1]*dnorm(yy, th[1], sd[1]) + p_[2]*dnorm(yy, th[2], sd[2]) +
                          p_[3]*dnorm(yy, th[3], sd[3])))
-  loglikR
+  checkEquals(loglikR, loglikC)
 #+END_SRC
 
-This number is nowhere near the published marginal likelihood.
+
 
 
 
