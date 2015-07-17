@@ -12,7 +12,7 @@ library(MASS)
 data(galaxies)
 #+end_src 
 
-Correct the 78th observation as in Perrakis /et al./:
+Correct the 78th observation:
 
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
   galaxies[78] <- 26960
@@ -69,19 +69,108 @@ variance:
 
 The target posterior distribution is given by
 
-$$ p(\psi | y ) =  \frac{p(y | \psi) p(\psi)}{m(y)},$$
-where the marginal likelihood is given by $m(y)$.  It follows that
+$$ p(\psi | y ) = \frac{p(y | \psi) p(\psi)}{m(y)},$$ where the
+marginal likelihood is given by $m(y)$.  We can rewrite this
+expression in terms of the marginal density for $y$ as
 
-$$ log[m(y)] = log[p(y|\psi)] + log[p(\psi)] - log[p(\psi | y)]$$
+$$ log[m(y)] = log[p(y|\psi^*)] + log[p(\psi^*)] - log[p(\psi^* |
+y)]$$
 
-for any $\psi$.  The log likelihood and log prior are straightforward
-to compute.  However, estimation of the posterior $p(\psi)|y)$ is more
-challenging.  
+for any ordinate $\psi^*$.  The first 2 terms on the RHS, the data log
+liklelihood and the prior, are known.  We compute these first.
 
-** Estimation of $p(\psi | y)$
+** The data log likelihood and the log prior
+
+The log likelihood and log prior are straightforward to compute and we
+evaluate each at the modal ordinates, $\psi^*$.
+
+*** Extracting the modal ordinates
+
+There are several ways to do this.
+
+#+BEGIN_SRC R
+  modal.ordinates <- modes(fit)
+  print(modal.ordinates)
+  ## Update slots of the paramters in MarginalModel with the modal.ordinates
+  fit2 <- useModes(fit)
+  identical(theta(fit2), modal.ordinates[["theta"]])
+  identical(sigma2(fit2), modal.ordinates[["sigma2"]])
+  ## Find the modal.ordinate using argMax, which looks at log lik *
+  ## prior for each MCMC iteration
+  i <- argMax(fit)
+  thetas <- theta(chains(fit))[i, ]
+  identical(thetas, modal.ordinates[["theta"]])
+#+END_SRC
+
+*** Complete data log likelihood and log prior
+
+The complete data log likelihood and log prior at the modal ordinates
+are given by 
+
+#+BEGIN_SRC R
+  loglik <- log_lik(chains(fit))[i]
+  logprior <- logPrior(chains(fit))[i]
+#+END_SRC
 
 
-We assume that the chain has reached stationarity.  Following Chib's
+Alternatively, the data log likelihood calculation is implemented in
+  C++ and could be computed directly for the model at the modal
+  ordinates:
+
+#+BEGIN_SRC R
+  (loglikC <- .Call("loglik", fit2))
+#+END_SRC
+
+We can verify the log likelihood calculation in R and there is an
+existing unit test for this in CNPBayes:
+
+#+BEGIN_SRC R
+  yy <- y(fit2)
+  th <- theta(fit2)
+  sd <- sigma(fit2)
+  p_ <- p(fit2)
+  loglikR <- sum(log(p_[1]*dnorm(yy, th[1], sd[1]) + p_[2]*dnorm(yy, th[2], sd[2]) +
+                         p_[3]*dnorm(yy, th[3], sd[3])))
+  checkEquals(loglikR, loglikC)
+#+END_SRC
+
+The joint prior is $p(\sigma^2_0, \nu_0, \mu, \tau^2, \pi)$ and is
+factored as $p(\sigma^2_0) * p(\nu_0) * p(\mu) * p(\tau^2) * p(\pi)$.
+
+#+BEGIN_SRC R
+  hypp <- hyperParams(fit2)
+  eta.0 <- CNPBayes:::eta.0(hypp)
+  m2.0 <- CNPBayes:::m2.0(hypp)
+  lpriorR <- log(dgeom(nu.0(fit2), CNPBayes:::betas(hypp))) +
+      log(dgamma(CNPBayes:::sigma2.0(fit2), CNPBayes:::a(hypp), CNPBayes:::b(hypp))) +
+          log(dnorm(mu(fit2), CNPBayes:::mu.0(hypp), sqrt(CNPBayes:::tau2.0(hypp)))) +
+              log(dgamma(1/tau2(fit2), 1/2*eta.0, 1/2*eta.0*m2.0)) +
+                  log(gtools::ddirichlet(p(fit2), CNPBayes:::alpha(hypp)))
+  lpriorC <- .Call("compute_logprior", fit2)
+  checkIdentical(lpriorR, lpriorC)
+#+END_SRC
+
+The likelihood of the population-level parameters at the second stage
+of the model is given by $p(\theta | \mu, \tau) p(\sigma^2 | \nu_0,
+\sigma_0^2)$. We compute this in R
+
+
+#+BEGIN_SRC R
+  n0 <- CNPBayes:::nu.0(fit2)
+  sigma2.0 <- CNPBayes:::sigma2.0(fit2)
+  stage2.loglik <- sum(log(dnorm(theta(fit2), mu(fit2), tau(fit2)) *
+                               dgamma(1/sigma2(fit2), 1/2*n0, 1/2*n0*sigma2.0)))
+  loglikAndPrior <- loglik + stage2.loglik + logprior
+#+END_SRC
+
+The likelihood for the second-stage parameters is not currently
+provided in C.
+
+
+** Estimation of p(\psi^* | y)
+
+We
+assume that the chain has reached stationarity.  Following Chib's
 [ref], we estimate $p(\psi|y)$ with block updates using the following
 steps:
 
@@ -99,52 +188,6 @@ p(\theta)$.
 
   p(\pi^* | \theta^*, \sigma^{2*}, y, z, \ldots)
 
-*** Finding modal ordinates
-
-  There are several ways to do this.
-
-#+BEGIN_SRC R
-  modal.ordinates <- modes(fit)
-  print(modal.ordinates)
-  ## Update slots of the paramters in MarginalModel with the modal.ordinates
-  fit2 <- useModes(fit)
-  identical(theta(fit2), modal.ordinates[["theta"]])
-  identical(sigma2(fit2), modal.ordinates[["sigma2"]])
-  ## Find the modal.ordinate using argMax, which looks at log lik *
-  ## prior for each MCMC iteration
-  i <- argMax(fit)
-  thetas <- theta(chains(fit))[i, ]
-  identical(thetas, modal.ordinates[["theta"]])
-#+END_SRC
-
-The complete data log likelihood and log prior at the modal ordinates
-are
-
-#+BEGIN_SRC R
-  loglik <- log_lik(chains(fit))[i]
-  logprior <- logPrior(chains(fit))[i]
-#+END_SRC
-
-Alternatively, the data log likelihood calculation is implemented in
-  C++ and could be computed directly for the model at the modal
-  ordinates:
-
-#+BEGIN_SRC R
-  (loglikC <- .Call("loglik", fit2))
-#+END_SRC
-
-We can verify this calculation in R and there is an existin unit test
-for this in CNPBayes:
-
-#+BEGIN_SRC R
-  yy <- y(fit2)
-  th <- theta(fit2)
-  sd <- sigma(fit2)
-  p_ <- p(fit2)
-  loglikR <- sum(log(p_[1]*dnorm(yy, th[1], sd[1]) + p_[2]*dnorm(yy, th[2], sd[2]) +
-                         p_[3]*dnorm(yy, th[3], sd[3])))
-  checkEquals(loglikR, loglikC)
-#+END_SRC
 
 
 
