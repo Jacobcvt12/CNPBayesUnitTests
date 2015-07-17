@@ -1,3 +1,8 @@
+#+TITLE: Chib's estimation of the marginal density for a hierarchical finite normal mixture
+#+DATE:  2015-07-17 Fri
+#+email: rscharpf@jhu.edu
+#+author:  Rob Scharpf
+
 * Packages
 
 #+begin_src R :tangle scripts/marginal_lik.R
@@ -57,7 +62,7 @@ published marginal likellihood for the 3-cluster model with unequal
 variance:
 
 #+BEGIN_SRC R 
-  published.mlik <- "-228.595"
+  published.mlik <- -228.595
   x <- computeMarginalLik2(list(fit))$marginal
   mlik <- x[[1]]["marginal"]
   print(mlik)
@@ -77,7 +82,10 @@ $$ log[m(y)] = log[p(y|\psi^*)] + log[p(\psi^*)] - log[p(\psi^* |
 y)]$$
 
 for any ordinate $\psi^*$.  The first 2 terms on the RHS, the data log
-liklelihood and the prior, are known.  We compute these first.
+liklelihood and the prior, are known and we compute these in the
+following section.  In all that follows, we assume that the chain has
+reached stationarity.  Convergence should be confirmed prior to
+estimating the marginal likelihood.
 
 ** The data log likelihood and the log prior
 
@@ -163,30 +171,174 @@ of the model is given by $p(\theta | \mu, \tau) p(\sigma^2 | \nu_0,
   loglikAndPrior <- loglik + stage2.loglik + logprior
 #+END_SRC
 
-The likelihood for the second-stage parameters is not currently
-provided in C.
+Things currently missing in the CNPBayes implementation:
 
+- The likelihood for the second-stage parameters is not currently
+  provided in C.
+- The likelihood of the second-stage parameters should be included
+  when selecting the modal parameters.
+- We should include the likelihood of the second-stage parameters when
+  estimating the marginal density
 
 ** Estimation of p(\psi^* | y)
 
-We
-assume that the chain has reached stationarity.  Following Chib's
-[ref], we estimate $p(\psi|y)$ with block updates using the following
-steps:
+The difference in the first two terms of the expression for the
+marginal density (that includes the second stage likelihood) and the
+tabled value for the true log marginal density should correspond to
+the true posterior probability at the modal ordinates $\psi^*$.
+
+#+BEGIN_SRC R
+  true.posterior <- loglikAndPrior - published.mlik  
+#+END_SRC
+
+Following Chib's [ref], we estimate $p(\psi|y)$ with block updates
+using the following steps:
 
 - use the existing MCMC chain to estimate $p(\theta^* | y, \sigma^*,
   \pi^*, z, \ldots)$
 
-where $\theta^*$ is the modal ordinate estimated as $argmax_\theta p(y | \theta, z, \ldots)
-p(\theta)$.
+where $\theta^*$ is the modal ordinate estimated as argmax$_\theta$ ~
+$p(y | \theta, z, \ldots) p(\theta)$.
 
 - Run a reduced Gibb's sampler with $\theta^*$ fixed to estimate
-  p(\sigma^* | \theta^*, y, z, \ldots)
+  $p(\sigma^* | \theta^*, y, z, \ldots)$
 
 - Run a reduced Gibb's sampler with $\theta^*$ and $\pi^*$ fixed at
   modal ordinates to estimate
 
   p(\pi^* | \theta^*, \sigma^{2*}, y, z, \ldots)
+
+
+Note: as implemented, the parameter vector $\psi$ is restricted to the
+first stage model parameters.  **We will likely need to incorporate
+second-stage model parameters in p(\psi | \ldots) to accurately
+estimate the posterior at the modal ordinates and the corresponding
+marginal density.**
+
+*** Block update for $\theta^*$
+
+To begin, we compute $p(\theta^* | y, \ldots)$ which we estimate via
+Rao-Blackwellization as
+
+$$\frac1S \sum_{s=1}^S p(\theta^* | y, \psi^{(s)}, z^{(s)}),$$
+
+where $S$ is the number of MCMC iterations in the full chain. Note
+that the values of $\psi^{(s)}$ are from the existing chain at
+iteration $s$.  As no additional MCMC is required, this step is
+reasonably fast.  It does not matter whether we pass the object ~fit2~
+or ~fit~ because the chains in these 2 objects are identical.  In the
+second step, we compute the Rao-Blackwellized estimate of $p(\theta^*|
+y), integrating out $z$ and parameters $\psi[-\theta]$.
+
+#+BEGIN_SRC R
+  ptheta.star <- .Call("marginal_theta", fit2)
+  (p.theta.rb <- mean(ptheta.star))
+#+END_SRC
+
+*** Block update for $\sigma^{2*}$
+
+The block update for $\sigma^{2*}$ requires running a reduced MCMC in
+ which we update all model parameters except $\theta$, fixing $\theta$
+ at the modal ordinate $\theta^*$ such that we have $p(\sigma^{2*} |
+ y, \theta^{*}, \ldots)$.  Here, we allow the user to run fewer
+ iterations by specifying an integer value for the argument $T2$ of
+ the ~computeMarginalLik~ function.  The C function for the reduced
+ Gibb's is called below. 
+
+**Refactoring needed**:
+
+- /This function is poorly named. Not sure why 'permutedz' is in the
+  name/.
+
+- Much of the code in ~.pthetastar~ is for permuting the modes.  This
+  should be removed from estimation of the marginal density.  In
+  particular, we should calculate the marginal density for whatever
+  ordering of modes is passed in the MarginalModel object.  Permuting
+  to a different set of modes would be a method defined for marginal
+  model that is irrelevant for the computation of Gibb's.
+
+- Check whether any of the methods for running the reduced Gibb's are
+  outdated and can be removed
+
+#+BEGIN_SRC R
+  T <- 500
+  mp.reduced <- McmcParams(iter=T, thin=2, burnin=0)
+  fit.psigma2 <- fit
+  mcmcParams(fit.psigma2, force=TRUE) <- mp.reduced
+  ## I do not recall why z is not updated.
+  ##fit.psigma2 <- .Call("permutedz_reduced1", object)
+  fit.psigma2 <- .Call("reduced_thetafixed", fit.psigma2)
+  checkIdentical(theta(fit.psigma2), modes(fit)[["theta"]])
+  psigma.star <- .Call("p_sigma2_zpermuted", fit.psigma2)
+  (p.sigma.rb <- mean(psigma.star))
+#+END_SRC
+
+*** Block update for $\pi^{*}$
+
+The block update for the mixture probabilities, $\pi^{*}$, requires
+ running a reduced MCMC in which we update all model parameters except
+ $\theta$ and $\sigma^2$.  Again, we fix $\theta$ and $\sigma^2$ at
+ the modal ordinate $\theta^*$ and $\sigma^{2*}$, respectively. The
+ Rao-Blackwellized estimate is given by
+
+$$p(\pi^* | y, \theta^*, \sigma^{2*}) = \frac1T \sum_{t=1}^T p(\pi^*| y, \theta^*, \sigma^{2*}, z^{(s)}, \psi^{(t)}), $$
+
+where $psi^{t}[-\theta,-\sigma^2]$ is the vector of parameters
+ (excluding \theta and \sigma^2) at iteration $t$ of the reduced
+ Gibb's.  The C function for simulating $psi^{t}[-\theta,-\sigma^2]$
+ from the reduced Gibb's is implemented in C+++.
+
+** It appears that in the current implementation, a reduced Gibb's with $\theta$ and $\sigma^2$ fixed was not run.**  We run it below.  
+
+#+BEGIN_SRC R
+  fit.pi.star <- fit
+  mcmcParams(fit.pi.star, force=TRUE) <- mp.reduced
+  fit.pi.star <- .Call("reduced_theta_sigma_fixed", fit.pi.star)
+  p.pi.star <- .Call("p_pmix_reduced", fit.pi.star)
+  p.pi.rb <- mean(p.pi.star)
+#+END_SRC
+
+** Computing the marginal density
+
+Since ~p.theta.rb~, ~p.sigma2.rb~, and ~p.pi.rb~ are already on the
+log scale, the Chib's estimate of the marginal density (log-scale) is
+given by
+
+#+BEGIN_SRC R
+  m.y <- loglikAndPrior - (p.theta.rb + p.sigma.rb + p.pi.rb)
+#+END_SRC
+
+Our estimate of the posterior at the modal ordinates and marginal
+density differ from the corresponding true values by
+
+#+BEGIN_SRC R
+  (p.theta.rb + p.sigma.rb + p.pi.rb) - true.posterior 
+#+END_SRC
+
+Any bias of this estimator should be less than $k!$
+
+#+BEGIN_SRC R
+  bias <- m.y - published.mlik 
+  bias < log(factorial(3))
+#+END_SRC
+
+** Extension of block updates to second stage model parameters $\mu, \tau^2, \nu_0,$ and $\sigma_0^2$.
+
+#+BEGIN_SRC R 
+
+
+#+END_SRC
+
+
+* Speed improvement
+
+- do not store the chains in the reduced Gibb's
+- do not permute the z-labels.  If we do, do it outside the
+  computation of the marginal density.  Only reasonable time to do
+  this is if there is not a clear winner.
+
+
+
 
 
 
