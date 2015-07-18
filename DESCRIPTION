@@ -1,7 +1,7 @@
 Package: CNPBayesUnitTests
 Type: Package
 Title: Bayesian mixture models for copy number polymorphisms long running unit tests
-Version: 0.0.02
+Version: 0.0.03
 Maintainer: Jacob Carey <jcarey15@jhu.edu>
 Description: Bayesian hierarchical mixture models for batch effects and copy
     number.
@@ -13,7 +13,8 @@ Depends:
     BiocGenerics,
     foreach,
     GenomicRanges,
-    methods
+    methods,
+    CNPBayes (>= 0.0.107)
 Imports:
     Hmisc,
     S4Vectors,
