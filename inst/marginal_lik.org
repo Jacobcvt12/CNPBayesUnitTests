@@ -7,8 +7,10 @@
 
 #+begin_src R :tangle scripts/marginal_lik.R
 library(RUnit)
-library(CNPBayes)
+##library(CNPBayes)
 library(MASS)
+library(devtools)
+load_all("~/Software/CNPBayes")
 #+end_src 
 
 * Galaxies data
@@ -30,27 +32,19 @@ Correct the 78th observation:
 Start by fitting the 3 component mixture model
 
 #+begin_src R :tangle scripts/marginal_lik.R
-  mp <- McmcParams(thin=100, iter=1000, burnin=1000)
+  mp <- McmcParams(thin=100, iter=1000, burnin=1000, nStarts=20)
   hypp <- Hyperparameters(type="marginal", k=3)
   model <- MarginalModel(data=galaxies/1000, k=3,
                          hypp=hypp,
                          mcmc.params=mp)
   fit <- posteriorSimulation(model)
-#+end_src
-
-#+BEGIN_SRC R :results value graphics
   dm <- plot(fit, ylim=c(0, 0.4), breaks=50)
-#+END_SRC
-
+#+end_src
 
 The plot suggests 4 components may be a better fit.
 
-#+BEGIN_SRC R
-  hypp <- Hyperparameters(type="marginal", k=4)
-  model <- MarginalModel(data=galaxies/1000, k=4,
-                         hypp=hypp,
-                         mcmc.params=mp)
-  fit4 <- posteriorSimulation(model)
+#+BEGIN_SRC R 
+  fit4 <- posteriorSimulation(model, k=4)
   dm4 <- plot(fit4, ylim=c(0, 0.4), breaks=50)
 #+END_SRC
 
@@ -61,9 +55,9 @@ Compute the marginal likelihood for the K=3 model and compare to the
 published marginal likellihood for the 3-cluster model with unequal
 variance:
 
-#+BEGIN_SRC R 
-  published.mlik <- -228.595
-  x <- computeMarginalLik2(list(fit))$marginal
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+  published.mlik <- -226.791
+  x <- computeMarginalLik(list(fit))$marginal
   mlik <- x[[1]]["marginal"]
   print(mlik)
   tryCatch(checkEquals(as.numeric(mlik), published.mlik, tolerance=3),
@@ -96,7 +90,7 @@ evaluate each at the modal ordinates, $\psi^*$.
 
 There are several ways to do this.
 
-#+BEGIN_SRC R
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
   modal.ordinates <- modes(fit)
   print(modal.ordinates)
   ## Update slots of the paramters in MarginalModel with the modal.ordinates
@@ -115,9 +109,9 @@ There are several ways to do this.
 The complete data log likelihood and log prior at the modal ordinates
 are given by 
 
-#+BEGIN_SRC R
-  loglik <- log_lik(chains(fit))[i]
-  logprior <- logPrior(chains(fit))[i]
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+  loglik <- modes(fit)[["loglik"]]
+  logprior <- modes(fit)[["logprior"]]
 #+END_SRC
 
 
@@ -125,14 +119,14 @@ Alternatively, the data log likelihood calculation is implemented in
   C++ and could be computed directly for the model at the modal
   ordinates:
 
-#+BEGIN_SRC R
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
   (loglikC <- .Call("loglik", fit2))
 #+END_SRC
 
 We can verify the log likelihood calculation in R and there is an
 existing unit test for this in CNPBayes:
 
-#+BEGIN_SRC R
+#+BEGIN_SRC R  :tangle scripts/marginal_lik.R
   yy <- y(fit2)
   th <- theta(fit2)
   sd <- sigma(fit2)
@@ -143,9 +137,9 @@ existing unit test for this in CNPBayes:
 #+END_SRC
 
 The joint prior is $p(\sigma^2_0, \nu_0, \mu, \tau^2, \pi)$ and is
-factored as $p(\sigma^2_0) * p(\nu_0) * p(\mu) * p(\tau^2) * p(\pi)$.
+factored as $p(\sigma^2_0)p(\nu_0)p(\mu)p(\tau^2)p(\pi)$.
 
-#+BEGIN_SRC R
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
   hypp <- hyperParams(fit2)
   eta.0 <- CNPBayes:::eta.0(hypp)
   m2.0 <- CNPBayes:::m2.0(hypp)
@@ -162,8 +156,8 @@ The likelihood of the population-level parameters at the second stage
 of the model is given by $p(\theta | \mu, \tau) p(\sigma^2 | \nu_0,
 \sigma_0^2)$. We compute this in R
 
-
-#+BEGIN_SRC R
+#+name: stage2_loglik
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
   n0 <- CNPBayes:::nu.0(fit2)
   sigma2.0 <- CNPBayes:::sigma2.0(fit2)
   stage2.loglik <- sum(log(dnorm(theta(fit2), mu(fit2), tau(fit2)) *
@@ -182,70 +176,68 @@ Things currently missing in the CNPBayes implementation:
 
 ** Estimation of p(\psi^* | y)
 
+
 The difference in the first two terms of the expression for the
 marginal density (that includes the second stage likelihood) and the
 tabled value for the true log marginal density should correspond to
 the true posterior probability at the modal ordinates $\psi^*$.
 
-#+BEGIN_SRC R
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
   true.posterior <- loglikAndPrior - published.mlik  
 #+END_SRC
 
-Following Chib's [ref], we estimate $p(\psi|y)$ with block updates
-using the following steps:
 
-- use the existing MCMC chain to estimate $p(\theta^* | y, \sigma^*,
-  \pi^*, z, \ldots)$
+*** Block updates
 
-where $\theta^*$ is the modal ordinate estimated as argmax$_\theta$ ~
-$p(y | \theta, z, \ldots) p(\theta)$.
+The objective is to estimate $p(\theta^*, \sigma^{2*}, \pi^* | y)$,
+which can be expressed as
 
-- Run a reduced Gibb's sampler with $\theta^*$ fixed to estimate
-  $p(\sigma^* | \theta^*, y, z, \ldots)$
+$$  p(\theta^* | y ) p(\sigma^{2*} | y, \theta^*) p(\pi^* | y, \theta^*, \sigma^{2*}).$$
 
-- Run a reduced Gibb's sampler with $\theta^*$ and $\pi^*$ fixed at
-  modal ordinates to estimate
+The first term is
 
-  p(\pi^* | \theta^*, \sigma^{2*}, y, z, \ldots)
+$$ p(\theta^* | y ) = \int p(\theta^* | y, \sigma^2, \pi, z) p(\sigma^2, \pi, z | y)d\sigma^2d\pi dz.$$
 
 
-Note: as implemented, the parameter vector $\psi$ is restricted to the
-first stage model parameters.  **We will likely need to incorporate
-second-stage model parameters in p(\psi | \ldots) to accurately
-estimate the posterior at the modal ordinates and the corresponding
-marginal density.**
 
-*** Block update for $\theta^*$
+Note: as implemented, the estimate of the marginal posterior is
+restricted to first-stage parameters.  **We will likely need to
+incorporate second-stage model parameters**
 
-To begin, we compute $p(\theta^* | y, \ldots)$ which we estimate via
-Rao-Blackwellization as
+**** Estimation of p(\theta^* | y)
 
-$$\frac1S \sum_{s=1}^S p(\theta^* | y, \psi^{(s)}, z^{(s)}),$$
+An estimate for the first term is obtained by taking an ergodic average of
 
-where $S$ is the number of MCMC iterations in the full chain. Note
-that the values of $\psi^{(s)}$ are from the existing chain at
-iteration $s$.  As no additional MCMC is required, this step is
-reasonably fast.  It does not matter whether we pass the object ~fit2~
-or ~fit~ because the chains in these 2 objects are identical.  In the
-second step, we compute the Rao-Blackwellized estimate of $p(\theta^*|
-y), integrating out $z$ and parameters $\psi[-\theta]$.
+$$p(\theta^* | y, \sigma^{2(s)}, z^{(s)}),$$
 
-#+BEGIN_SRC R
+using the posterior draws of (\sigma^2, \pi, z). No additional MCMC is
+required for this estimate.  It does not matter whether we pass the
+object ~fit2~ or ~fit~ because the chains in these 2 objects are
+identical. 
+
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
   ptheta.star <- .Call("marginal_theta", fit2)
-  (p.theta.rb <- mean(ptheta.star))
+  (p.theta.rb <- log(mean(ptheta.star)))
 #+END_SRC
 
-*** Block update for $\sigma^{2*}$
+**** Estimation of $p(\sigma^{2*} | y, \theta^*)$
 
-The block update for $\sigma^{2*}$ requires running a reduced MCMC in
- which we update all model parameters except $\theta$, fixing $\theta$
- at the modal ordinate $\theta^*$ such that we have $p(\sigma^{2*} |
- y, \theta^{*}, \ldots)$.  Here, we allow the user to run fewer
- iterations by specifying an integer value for the argument $T2$ of
- the ~computeMarginalLik~ function.  The C function for the reduced
- Gibb's is called below. 
+Note
 
-**Refactoring needed**:
+$$p(\sigma^{2*} | y, \theta^*)  = \int p(\sigma^{2*} | y, \theta^*, \pi, z) p(\pi, z | y, \theta^*)d\pi dz.$$ 
+
+To estimate $p(\sigma^{2*} | y)$, we take an ergodic average of
+$p(\sigma^{2*} | y, \pi^{(s)}, z^{(s)})$ using draws of (\pi, z) from
+a **reduced** Gibb's sampler. ** It is important to have draws of $z$
+from [z | y, \theta*] (not [z | y]) and draws of $\pi$ from [\pi | y,
+\theta*].
+
+We allow the user to run fewer MCMC iterations in the reduced Gibbs by
+ specifying an integer value for the argument $T2$ of the
+ ~computeMarginalLik~ function.  The C++ function for the reduced
+ Gibb's is called below.
+
+**Refactoring needed:** 
 
 - /This function is poorly named. Not sure why 'permutedz' is in the
   name/.
@@ -260,7 +252,7 @@ The block update for $\sigma^{2*}$ requires running a reduced MCMC in
 - Check whether any of the methods for running the reduced Gibb's are
   outdated and can be removed
 
-#+BEGIN_SRC R
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
   T <- 500
   mp.reduced <- McmcParams(iter=T, thin=2, burnin=0)
   fit.psigma2 <- fit
@@ -269,33 +261,33 @@ The block update for $\sigma^{2*}$ requires running a reduced MCMC in
   ##fit.psigma2 <- .Call("permutedz_reduced1", object)
   fit.psigma2 <- .Call("reduced_thetafixed", fit.psigma2)
   checkIdentical(theta(fit.psigma2), modes(fit)[["theta"]])
+  identical(modes(fit.psigma2), modes(fit))
   psigma.star <- .Call("p_sigma2_zpermuted", fit.psigma2)
-  (p.sigma.rb <- mean(psigma.star))
+  (p.sigma.rb <- log(mean(exp(psigma.star))))
 #+END_SRC
 
-*** Block update for $\pi^{*}$
+**** Estimation of $p(\pi^* | y, \theta^*, \sigma^{2*})$  
 
-The block update for the mixture probabilities, $\pi^{*}$, requires
- running a reduced MCMC in which we update all model parameters except
- $\theta$ and $\sigma^2$.  Again, we fix $\theta$ and $\sigma^2$ at
- the modal ordinate $\theta^*$ and $\sigma^{2*}$, respectively. The
- Rao-Blackwellized estimate is given by
+We write the third term as
 
-$$p(\pi^* | y, \theta^*, \sigma^{2*}) = \frac1T \sum_{t=1}^T p(\pi^*| y, \theta^*, \sigma^{2*}, z^{(s)}, \psi^{(t)}), $$
+$$p(\pi^{*} | y, \theta^*, \sigma^{2*})  = \int p(\pi^* | y, \theta^*, \sigma^{2*}, z) p(z | y, \theta^*, \sigma^{2*})dz.$$ 
 
-where $psi^{t}[-\theta,-\sigma^2]$ is the vector of parameters
- (excluding \theta and \sigma^2) at iteration $t$ of the reduced
- Gibb's.  The C function for simulating $psi^{t}[-\theta,-\sigma^2]$
- from the reduced Gibb's is implemented in C+++.
+To estimate $p(\pi^{*} | y)$, we take an ergodic average of
+$p(\pi^{*} | y, \theta^*, \sigma^{2*}, z^{(s)})$ using draws of $z
+from a **reduced** Gibb's sampler. The draws of $z$ are from [z | y,
+\theta^*, \sigma^{2*}]. The C function for simulating from [z|theta^*,
+\sigma^{2*}] is implemented in C+++.
 
-** It appears that in the current implementation, a reduced Gibb's with $\theta$ and $\sigma^2$ fixed was not run.**  We run it below.  
+// It appears that in the current implementation, a reduced Gibb's
+with $\theta$ and $\sigma^2$ fixed was not run./
 
-#+BEGIN_SRC R
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
   fit.pi.star <- fit
   mcmcParams(fit.pi.star, force=TRUE) <- mp.reduced
   fit.pi.star <- .Call("reduced_theta_sigma_fixed", fit.pi.star)
+  identical(modes(fit.pi.star), modes(fit))
   p.pi.star <- .Call("p_pmix_reduced", fit.pi.star)
-  p.pi.rb <- mean(p.pi.star)
+  p.pi.rb <- log(mean(exp(p.pi.star)))
 #+END_SRC
 
 ** Computing the marginal density
@@ -304,29 +296,40 @@ Since ~p.theta.rb~, ~p.sigma2.rb~, and ~p.pi.rb~ are already on the
 log scale, the Chib's estimate of the marginal density (log-scale) is
 given by
 
-#+BEGIN_SRC R
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
   m.y <- loglikAndPrior - (p.theta.rb + p.sigma.rb + p.pi.rb)
 #+END_SRC
 
-Our estimate of the posterior at the modal ordinates and marginal
-density differ from the corresponding true values by
+Bias correction and comparison to published value:
 
-#+BEGIN_SRC R
-  (p.theta.rb + p.sigma.rb + p.pi.rb) - true.posterior 
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+  m.bc <- m.y - log(factorial(3))
+  m.bc - published.mlik
 #+END_SRC
 
-Any bias of this estimator should be less than $k!$
+** Extension of block updates to second stage model parameters \mu, \tau^2, \nu_0, and \sigma_0^2.
 
-#+BEGIN_SRC R
-  bias <- m.y - published.mlik 
-  bias < log(factorial(3))
-#+END_SRC
+*** Estimation of p(\mu | y, \theta^, \sigma^{2*}, \pi^*)
 
-** Extension of block updates to second stage model parameters $\mu, \tau^2, \nu_0,$ and $\sigma_0^2$.
+We have
+
+$$p(\mu^* | y, \theta^*, \sigma^{2*}, \pi^*) = \int p(\mu^{*} | y, \theta^*, \sigma^{2*}, \pi^*, \tau^{2}, \nu_0, \sigma_0^2, z)   p(\tau^{2}, \nu_0, \sigma_0^2, z | y, \theta^*, \sigma^{2*}\pi^*)d\tau^2d \nu_0 d \sigma_0^2 dz.$$ 
+
+To estimate $p(\mu^{*} | y, y, \theta^, \sigma^{2*}, \pi^*)$, we take
+an ergodic average of $p(\pi^{*} | y, \theta^*, \sigma^{2*},
+\tau^{2(s)}, \nu_0^{(s)}, \sigma_0^{2(s)}, z^{(s)})$ using draws of $z
+from a **reduced** Gibb's sampler. The draws of $z$ are from [z | y,
+\theta^*, \sigma^{2*}, \pi^*]. The C function for simulating from is
+implemented in C+++.
 
 #+BEGIN_SRC R 
-
-
+  fit.mu.star <- fit
+  mcmcParams(fit.mu.star, force=TRUE) <- mp.reduced
+  fit.mu.star <- .Call("reduced_pi_fixed", fit.mu.star)
+  identical(modes(fit.mu.star), modes(fit))
+  p.mu.star <- dnorm(modes(fit)[["mu"]], mu.0(hypp), tau.0(hypp))
+  p.mu.star <- .Call("p_pmix_reduced", fit.pi.star)
+  p.pi.rb <- log(mean(exp(p.pi.star)))
 #+END_SRC
 
 
