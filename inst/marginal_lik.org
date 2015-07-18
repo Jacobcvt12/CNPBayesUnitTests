@@ -263,7 +263,7 @@ We allow the user to run fewer MCMC iterations in the reduced Gibbs by
   checkIdentical(theta(fit.psigma2), modes(fit)[["theta"]])
   identical(modes(fit.psigma2), modes(fit))
   psigma.star <- .Call("p_sigma2_zpermuted", fit.psigma2)
-  (p.sigma.rb <- log(mean(exp(psigma.star))))
+  (p.sigma.rb <- log(mean(psigma.star)))
 #+END_SRC
 
 **** Estimation of $p(\pi^* | y, \theta^*, \sigma^{2*})$  
@@ -287,7 +287,10 @@ with $\theta$ and $\sigma^2$ fixed was not run./
   fit.pi.star <- .Call("reduced_theta_sigma_fixed", fit.pi.star)
   identical(modes(fit.pi.star), modes(fit))
   p.pi.star <- .Call("p_pmix_reduced", fit.pi.star)
-  p.pi.rb <- log(mean(exp(p.pi.star)))
+  (p.pi.rb <- log(mean(p.pi.star)))
+  ## check
+  zz <- z(chains(fit.pi.star))
+  gtools::ddirichlet(modes(fit)[["mixprob"]], alpha(hypp) + table(zz[2,]))
 #+END_SRC
 
 ** Computing the marginal density
@@ -309,7 +312,7 @@ Bias correction and comparison to published value:
 
 ** Extension of block updates to second stage model parameters \mu, \tau^2, \nu_0, and \sigma_0^2.
 
-*** Estimation of p(\mu | y, \theta^, \sigma^{2*}, \pi^*)
+*** Estimation of p(\mu | y, \theta^*, \sigma^{2*}, \pi^*)
 
 We have
 
@@ -322,14 +325,84 @@ from a **reduced** Gibb's sampler. The draws of $z$ are from [z | y,
 \theta^*, \sigma^{2*}, \pi^*]. The C function for simulating from is
 implemented in C+++.
 
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+  fit.mustar <- fit
+  mcmcParams(fit.mustar, force=TRUE) <- mp.reduced
+  fit.mustar <- .Call("reduced_mu", fit.mustar)
+  identical(modes(fit.mustar), modes(fit))
+  ##tau2s <- tau2(chains(fit.mustar))
+  p.mustar <- .Call("p_mu_reduced", fit.mustar)
+  (p.mu.rb <- log(mean(p.mustar)))
+#+END_SRC
+
+
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+  (m.y <- loglikAndPrior - (p.theta.rb + p.sigma.rb + p.pi.rb + p.mu.rb))
+#+END_SRC
+
+*** Estimation of p(\tau2 | y, \theta^*, \sigma^{2*}, \pi^*, \mu^*)
+
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+  fit.taustar <- fit
+  mcmcParams(fit.taustar, force=TRUE) <- mp.reduced
+  fit.taustar <- .Call("reduced_tau", fit.taustar)
+  identical(modes(fit.taustar), modes(fit))
+  p.taustar <- .Call("p_tau_reduced", fit.mustar)
+  ##
+  ## There is only 1 value for p.taustar -- we did not need a chain.
+  ## 'reduced_tau' may be unnecessary
+  ##
+  (p.tau.rb <- log(p.taustar))
+#+END_SRC
+
 #+BEGIN_SRC R 
-  fit.mu.star <- fit
-  mcmcParams(fit.mu.star, force=TRUE) <- mp.reduced
-  fit.mu.star <- .Call("reduced_pi_fixed", fit.mu.star)
-  identical(modes(fit.mu.star), modes(fit))
-  p.mu.star <- dnorm(modes(fit)[["mu"]], mu.0(hypp), tau.0(hypp))
-  p.mu.star <- .Call("p_pmix_reduced", fit.pi.star)
-  p.pi.rb <- log(mean(exp(p.pi.star)))
+  (m.y <- loglikAndPrior - (p.theta.rb + p.sigma.rb + p.pi.rb + p.mu.rb + p.tau.rb))
+#+END_SRC
+
+*** Estimation of p(\nu_0^* | y, \theta^*, \sigma^{2*}, \pi^*, \tau^{2*})
+
+ $\nu_0$ does not have a conjugate prior -- we sample from an
+ un-normalized probability distribution.  As $\nu_0$ is restricted to
+ an integer value, we simply compute the un-normalized probabilities
+ for integers 1, \ldots, 100 and scale the un-normalized probability
+ at $\nu_0^*$ by the total of the un-normalized probabilities.
+
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+  fit.nu0star <- fit
+  mcmcParams(fit.nu0star, force=TRUE) <- mp.reduced
+  fit.nu0star <- .Call("reduced_nu0", fit.nu0star)
+  identical(modes(fit.nu0star), modes(fit))
+  p.nu0star <- .Call("p_nu0_reduced", fit.nu0star)
+  (p.nu0.rb <- log(mean(p.nu0star)))
+#+END_SRC
+
+#+BEGIN_SRC R
+  p.star = p.theta.rb + p.sigma.rb + p.pi.rb + p.mu.rb + p.tau.rb + p.nu0.rb
+  (m.y <- loglikAndPrior - p.star)
+#+END_SRC
+
+*** Estimation of p(\sigma2_0^* | y, \theta^*, \sigma^{2*}, \pi^*, \tau^{2*}, \nu_0^*)
+
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+  fit.s20star <- fit
+  mcmcParams(fit.s20star, force=TRUE) <- mp.reduced
+  fit.s20star <- .Call("reduced_s20", fit.s20star)
+  p.s20star <- .Call("p_s20_reduced", fit.s20star)
+  p.s20.rb <- log(p.s20star)
+#+END_SRC
+
+#+BEGIN_SRC R
+  p.star = p.theta.rb + p.sigma.rb + p.pi.rb + p.mu.rb + p.tau.rb + p.nu0.rb + p.s20.rb
+  (m.y <- loglikAndPrior - p.star)
+  m.bc <- m.y - log(factorial(3))
+  published.mlik - m.bc
+#+END_SRC
+
+* R wrapper for marginal likelihood
+
+#+BEGIN_SRC R
+
+
 #+END_SRC
 
 
