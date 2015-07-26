@@ -8,7 +8,7 @@ Description: Bayesian hierarchical mixture models for batch effects and copy
 Date: Tue Jun 23 19:41:00 EST 2015
 Author: Stephen Cristiano, Robert Scharpf, and Jacob Carey
 Depends:
-    CNPBayes (>= 0.0.107)
+    CNPBayes (>= 0.0.113)
 Suggests:
     RUnit,
     knitr,
