@@ -32,13 +32,14 @@ Correct the 78th observation:
 Start by fitting the 3 component mixture model
 
 #+begin_src R :tangle scripts/marginal_lik.R
-  mp <- McmcParams(thin=100, iter=1000, burnin=1000, nStarts=20)
+  mp <- McmcParams(thin=100, iter=1000, burnin=10000, nStarts=20)
   hypp <- Hyperparameters(type="marginal", k=3)
   model <- MarginalModel(data=galaxies/1000, k=3,
                          hypp=hypp,
                          mcmc.params=mp)
   fit <- posteriorSimulation(model)
   dm <- plot(fit, ylim=c(0, 0.4), breaks=50)
+  plot.ts(logPrior(chains(fit)))
 #+end_src
 
 The plot suggests 4 components may be a better fit.
@@ -49,7 +50,7 @@ The plot suggests 4 components may be a better fit.
 #+END_SRC
 
 * Computing the marginal likelihood
-** Using CNPBayes function
+** COMMENT Using CNPBayes function
 
 Compute the marginal likelihood for the K=3 model and compare to the
 published marginal likellihood for the 3-cluster model with unequal
@@ -64,7 +65,6 @@ variance:
            error=function(e) "CNPBayes estimate not within tolerance")
 #+END_SRC
 
-** Steps used in ~CNPBayes~ for marginal likelihood estimation 
 
 The target posterior distribution is given by
 
@@ -84,11 +84,8 @@ estimating the marginal likelihood.
 ** The data log likelihood and the log prior
 
 The log likelihood and log prior are straightforward to compute and we
-evaluate each at the modal ordinates, $\psi^*$.
-
-*** Extracting the modal ordinates
-
-There are several ways to do this.
+evaluate each at the modal ordinates, $\psi^*$.  There are several
+ways to extract modal ordinates.
 
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
   modal.ordinates <- modes(fit)
@@ -111,6 +108,8 @@ are given by
 
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
   loglik <- modes(fit)[["loglik"]]
+  fit2 <- useModes(fit)
+  s2.loglik <- .Call("stageTwoLogLik", fit2)
   logprior <- modes(fit)[["logprior"]]
 #+END_SRC
 
@@ -121,19 +120,8 @@ Alternatively, the data log likelihood calculation is implemented in
 
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
   (loglikC <- .Call("loglik", fit2))
-#+END_SRC
-
-We can verify the log likelihood calculation in R and there is an
-existing unit test for this in CNPBayes:
-
-#+BEGIN_SRC R  :tangle scripts/marginal_lik.R
-  yy <- y(fit2)
-  th <- theta(fit2)
-  sd <- sigma(fit2)
-  p_ <- p(fit2)
-  loglikR <- sum(log(p_[1]*dnorm(yy, th[1], sd[1]) + p_[2]*dnorm(yy, th[2], sd[2]) +
-                         p_[3]*dnorm(yy, th[3], sd[3])))
-  checkEquals(loglikR, loglikC)
+  stage2.loglik <- .Call("stageTwoLogLik", fit2)
+  loglikC <- loglikC + stage2.loglik
 #+END_SRC
 
 The joint prior is $p(\sigma^2_0, \nu_0, \mu, \tau^2, \pi)$ and is
@@ -162,17 +150,8 @@ of the model is given by $p(\theta | \mu, \tau) p(\sigma^2 | \nu_0,
   sigma2.0 <- CNPBayes:::sigma2.0(fit2)
   stage2.loglik <- sum(log(dnorm(theta(fit2), mu(fit2), tau(fit2)) *
                                dgamma(1/sigma2(fit2), 1/2*n0, 1/2*n0*sigma2.0)))
-  loglikAndPrior <- loglik + stage2.loglik + logprior
+  loglikAndPrior <- loglik + logprior
 #+END_SRC
-
-Things currently missing in the CNPBayes implementation:
-
-- The likelihood for the second-stage parameters is not currently
-  provided in C.
-- The likelihood of the second-stage parameters should be included
-  when selecting the modal parameters.
-- We should include the likelihood of the second-stage parameters when
-  estimating the marginal density
 
 ** Estimation of p(\psi^* | y)
 
@@ -189,20 +168,16 @@ the true posterior probability at the modal ordinates $\psi^*$.
 
 *** Block updates
 
-The objective is to estimate $p(\theta^*, \sigma^{2*}, \pi^* | y)$,
+The objective is to estimate $p(\theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*, \nu_0^*, \sigma_0^{2*} | y)$,
 which can be expressed as
 
-$$  p(\theta^* | y ) p(\sigma^{2*} | y, \theta^*) p(\pi^* | y, \theta^*, \sigma^{2*}).$$
+$$  p(\theta^* | y ) p(\sigma^{2*} | y, \theta^*) p(\pi^* | y, \theta^*, \sigma^{2*}) p(\mu^* | y, \theta^*, \sigma^{2*}, \pi^*)p(\tau^*| \theta^*, \sigma^{2*}, \pi^*, \mu^*) 
+p(\tau^*| \theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*) p(\nu_0^*| \theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*)p(\sigma_0^{2*}| \theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*, \nu_0^*)
+$$
 
 The first term is
 
-$$ p(\theta^* | y ) = \int p(\theta^* | y, \sigma^2, \pi, z) p(\sigma^2, \pi, z | y)d\sigma^2d\pi dz.$$
-
-
-
-Note: as implemented, the estimate of the marginal posterior is
-restricted to first-stage parameters.  **We will likely need to
-incorporate second-stage model parameters**
+$$ p(\theta^* | y ) = \int p(\theta^* | y, \sigma^2, \pi, z, \ldots) p(\sigma^2, \pi, z | y, \ldots)d(\sigma^2, \mu, \pi, z, \dots)$$
 
 **** Estimation of p(\theta^* | y)
 
@@ -259,11 +234,58 @@ We allow the user to run fewer MCMC iterations in the reduced Gibbs by
   mcmcParams(fit.psigma2, force=TRUE) <- mp.reduced
   ## I do not recall why z is not updated.
   ##fit.psigma2 <- .Call("permutedz_reduced1", object)
-  fit.psigma2 <- .Call("reduced_thetafixed", fit.psigma2)
+  fit.psigma2 <- .Call("reduced_sigma", fit.psigma2)
+  p.sigma2 <- .Call("p_sigma_reduced", fit.psigma2)
+  p.sigma.rb <- log(mean(p.sigma2))
+#+END_SRC
+
+***** COMMENT Debugging small values in p(sigma^* | ...)
+#+BEGIN_SRC R
+  plot(fit.psigma2, breaks=50, ylim=c(0, 0.4))
+  plot.ts(sigma2.0(chains(fit.psigma2)))
+
   checkIdentical(theta(fit.psigma2), modes(fit)[["theta"]])
   identical(modes(fit.psigma2), modes(fit))
-  psigma.star <- .Call("p_sigma2_zpermuted", fit.psigma2)
+  psigma.star <- .Call("p_sigma_reduced", fit.psigma2)
   (p.sigma.rb <- log(mean(psigma.star)))
+
+
+  sigma2star <- modes(fit)[["sigma2"]]
+  thetastar <- modes(fit)[["theta"]]
+  prec <- 1/sigma2star
+  Z <- z(chains(fit.psigma2))
+  K <- 3
+  s20chain <- sigma2.0(chains(fit.psigma2))
+  nu0chain <- nu.0(chains(fit.psigma2))
+  x <- y(fit.psigma2)
+
+
+
+  ## the density estimates for the component variances gets very small
+  ## because sigma2.0 gets very small.  sigma2.0 should not get very
+  ## small as a result of fixing theta.
+  S <- iter(fit.psigma2)
+  p_prec <- rep(NA, S)
+  for(s in 1:S){
+    ##for(int s=0; s < S; ++s){
+    zz = Z[s, ]
+    nn = tableZ(K, zz) ;
+    s20 = s20chain[s] ;
+    nu0 = nu0chain[s] ;
+
+    ss <- rep(NA, K)
+    for(k in 1:K){
+      ss[k] <- sum((x[zz==k] - thetastar[k])^2)
+    }
+    total <- 1
+    nu.n <- nu0 + nn
+    sigma2.n = 1/nu.n*(nu0*s20 + ss) ;
+    d <- rep(NA, K)
+    for(k in 1:K){
+      d[k] <- dgamma(prec[k], 0.5*nu.n[k], 0.5*nu.n[k]*sigma2.n[k])
+    }
+    p_prec[s] <- prod(d)
+  }
 #+END_SRC
 
 **** Estimation of $p(\pi^* | y, \theta^*, \sigma^{2*})$  
@@ -284,16 +306,19 @@ with $\theta$ and $\sigma^2$ fixed was not run./
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
   fit.pi.star <- fit
   mcmcParams(fit.pi.star, force=TRUE) <- mp.reduced
-  fit.pi.star <- .Call("reduced_theta_sigma_fixed", fit.pi.star)
+  fit.pi.star <- .Call("reduced_pi", fit.pi.star)
   identical(modes(fit.pi.star), modes(fit))
   p.pi.star <- .Call("p_pmix_reduced", fit.pi.star)
   (p.pi.rb <- log(mean(p.pi.star)))
   ## check
   zz <- z(chains(fit.pi.star))
   gtools::ddirichlet(modes(fit)[["mixprob"]], alpha(hypp) + table(zz[2,]))
+  mp <- modes(fit)[["mixprob"]]
+  ztab <- tableZ(3, z(fit))
+  ##ddirichlet(mp, 1+ztab)
 #+END_SRC
 
-** Computing the marginal density
+** COMMENT Computing the marginal density
 
 Since ~p.theta.rb~, ~p.sigma2.rb~, and ~p.pi.rb~ are already on the
 log scale, the Chib's estimate of the marginal density (log-scale) is
@@ -306,7 +331,7 @@ given by
 Bias correction and comparison to published value:
 
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
-  m.bc <- m.y - log(factorial(3))
+  m.bc <- m.y + log(factorial(3))
   m.bc - published.mlik
 #+END_SRC
 
@@ -320,10 +345,10 @@ $$p(\mu^* | y, \theta^*, \sigma^{2*}, \pi^*) = \int p(\mu^{*} | y, \theta^*, \si
 
 To estimate $p(\mu^{*} | y, y, \theta^, \sigma^{2*}, \pi^*)$, we take
 an ergodic average of $p(\pi^{*} | y, \theta^*, \sigma^{2*},
-\tau^{2(s)}, \nu_0^{(s)}, \sigma_0^{2(s)}, z^{(s)})$ using draws of $z
-from a **reduced** Gibb's sampler. The draws of $z$ are from [z | y,
-\theta^*, \sigma^{2*}, \pi^*]. The C function for simulating from is
-implemented in C+++.
+\tau^{2(s)}, \nu_0^{(s)}, \sigma_0^{2(s)}, z^{(s)})$ using draws of
+$z$ from a **reduced** Gibb's sampler. The draws of $z$ are from [z |
+y, \theta^*, \sigma^{2*}, \pi^*]. The function for simulating is
+implemented in C++.
 
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
   fit.mustar <- fit
@@ -335,9 +360,80 @@ implemented in C+++.
   (p.mu.rb <- log(mean(p.mustar)))
 #+END_SRC
 
+*** COMMENT Debugging p(\mu^*| \ldots)
 
-#+BEGIN_SRC R :tangle scripts/marginal_lik.R
-  (m.y <- loglikAndPrior - (p.theta.rb + p.sigma.rb + p.pi.rb + p.mu.rb))
+Values of $p(\mu^* |\ldots)$ are near 0, but this seems strange if
+$\mu^*$ is a modal ordinate and $p(\mu^*| ldots)$ is the full
+conditional (with constraints).
+ 
+#+BEGIN_SRC R
+  fit.mustar <- fit
+  mcmcParams(fit.mustar, force=TRUE) <- mp.reduced
+  fit.mustar <- .Call("reduced_mu", fit.mustar)
+  identical(modes(fit.mustar), modes(fit))
+  ##tau2s <- tau2(chains(fit.mustar))
+  p.mustar <- .Call("p_mu_reduced", fit.mustar)
+
+  median(mu(chains(fit.mustar))) ## mean of chain is strange...
+  plot.ts(mu(chains(fit.mustar)))
+  plot.ts(tau(chains(fit.mustar)))
+  median(tau2(chains(fit.mustar))) ## tau2 is very large
+  table(z(chains(fit.mustar))[1, ])
+  table(z(chains(fit.mustar))[50, ])
+  table(z(chains(fit.mustar))[200, ])
+  plot.ts(nu.0(chains(fit.mustar))) ## tau2 is very large
+  plot.ts(sigma2.0(chains(fit.mustar))) ## tau2 is very large
+
+
+  mu <- modes(fit.mustar)[["mu"]]
+
+
+  total <- length(y(fit.mustar))
+  ##  for(int s = 0; s < S; ++s){
+  ##    zz = Z(s, _) ;
+  zz <- z(chains(fit.mustar))[argMax(fit.mustar), ]
+  nn <- table(zz)
+  thetastar <- modes(fit.mustar)[["theta"]]
+  thetabar <- sum(nn * thetastar / total)
+  hypp <- hyperParams(fit.mustar)
+  mu0 <- mu.0(hypp)
+  tau20 <- tau2.0(hypp)
+  tau20.tilde <- 1/tau20
+  tau2.tilde <- 1/tau2(fit)
+  K <- 3
+  postprec <- tau20.tilde + K*tau2.tilde
+  w1 <- tau20.tilde/postprec
+  w2 <- K*tau2.tilde/postprec
+  mu.k =  w1*mu0 +  w2*thetabar ;
+  tau.k = sqrt(1.0/postprec) ;
+  dnorm(mu, mu.k, tau.k)
+
+  hypp <- hyperParams(fit.mustar)
+  mu0 <- mu.0(hypp)
+  tau20 <- tau2.0(hypp)
+  tau20.tilde <- 1/tau20
+  tau2chain <- tau2(chains(fit.mustar))
+  tau2.tilde <- 1/tau2chain
+  Z <- z(chains(fit.mustar))
+  K <- 3
+  thetastar <- modes(fit.mustar)[["theta"]]
+  S <- iter(fit.mustar)
+  p.mu <- rep(NA, S)
+  mustar <- modes(fit.mustar)[["mu"]]
+
+  for(s in 1:iter(fit.mustar)){
+    zz = Z[s, ] ;
+    nn = tableZ(K, zz) ;
+    total <- sum(nn)
+    thetabar <- sum(nn*thetastar/total)
+    post.prec <- tau20.tilde + K * tau2.tilde[s]
+    ##double post_prec = tau20_tilde + K*tau2_tilde[s] ;
+    w1 = tau20.tilde/post.prec ;
+    w2 = K*tau2.tilde[s]/post.prec ;
+    mu.k =  w1*mu0 +  w2*thetabar ;
+    tau.k = sqrt(1/post.prec) ;
+    p.mu[s]  = dnorm(mustar, mu.k, tau.k) ;
+  }
 #+END_SRC
 
 *** Estimation of p(\tau2 | y, \theta^*, \sigma^{2*}, \pi^*, \mu^*)
@@ -353,6 +449,21 @@ implemented in C+++.
   ## 'reduced_tau' may be unnecessary
   ##
   (p.tau.rb <- log(p.taustar))
+#+END_SRC
+
+**** COMMENT Verify p(\tau^2| ...)
+
+#+BEGIN_SRC R
+  tau2star <- modes(fit)[["tau2"]]
+  mustar <- modes(fit)[["mu"]]
+  K <- 3
+  eta0 <- eta.0(hypp)
+  etak <- eta0+K
+  m20 <- m2.0(hypp)
+
+  s2.k <- sum((thetastar - mustar)^2)
+  m2.k <- 1/etak * (eta0 * m20 + s2.k)
+  p.tau <- dgamma(1/tau2star, 1/2*etak, 1/2*etak*m2.k)
 #+END_SRC
 
 #+BEGIN_SRC R 
@@ -401,8 +512,16 @@ implemented in C+++.
 * R wrapper for marginal likelihood
 
 #+BEGIN_SRC R
-
-
+  pstar <- matrix(NA, 7, 4)
+  tmp <- blockUpdates(fit, McmcParams(iter=1))
+  rownames(pstar) <- names(tmp)
+  pstar[, 1] <- blockUpdates(fit, McmcParams(iter=500))
+  pstar[, 2] <- blockUpdates(fit, McmcParams(iter=1000))
+  pstar[, 3] <- blockUpdates(fit, McmcParams(iter=5000))
+  pstar[, 4] <- blockUpdates(fit, McmcParams(iter=10000))
+  round(pstar, 3)
+  all(matrixStats::rowSds(pstar) < 0.1)
+  m.y <- marginalLikelihood(fit, 1000)
 #+END_SRC
 
 
