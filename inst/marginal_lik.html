@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>Chib's estimation of the marginal density for a hierarchical finite normal mixture</title>
-<!-- 2015-07-30 Thu 14:39 -->
+<!-- 2015-07-30 Thu 14:47 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Rob Scharpf" />
@@ -232,10 +232,10 @@ for the JavaScript code in this tag.
 <div class="org-src-container">
 
 <pre class="src src-R" id="load_packages"><span style="color: #BFEBBF;">library</span>(RUnit)
-<span style="color: #5F7F5F;">##</span><span style="color: #7F9F7F;">library(CNPBayes)</span>
 <span style="color: #BFEBBF;">library</span>(MASS)
 <span style="color: #BFEBBF;">library</span>(devtools)
 load_all(<span style="color: #CC9393;">"~/Software/CNPBayes"</span>)
+set.seed(123)
 </pre>
 </div>
 </div>
@@ -307,11 +307,15 @@ Gibb's samplers.
 
 <div class="org-src-container">
 
-<pre class="src src-R">m.y <span style="color: #BFEBBF;">&lt;-</span> marginalLikelihood(fit, 1000)
+<pre class="src src-R">(m.y <span style="color: #BFEBBF;">&lt;-</span> marginalLikelihood(fit, 1000))
 published.mlik <span style="color: #BFEBBF;">&lt;-</span> -226.791  
-abs(m.y - published.mlik)
+round(abs(m.y - published.mlik), 2)
 </pre>
 </div>
+
+<pre class="example">
+1.52
+</pre>
 </div>
 </div>
 
@@ -773,10 +777,10 @@ Simulate a batch effect in the galaxy data.
 <div class="org-src-container">
 
 <pre class="src src-R"><span style="color: #BFEBBF;">library</span>(RUnit)
-<span style="color: #5F7F5F;">##</span><span style="color: #7F9F7F;">library(CNPBayes)</span>
 <span style="color: #BFEBBF;">library</span>(MASS)
 <span style="color: #BFEBBF;">library</span>(devtools)
 load_all(<span style="color: #CC9393;">"~/Software/CNPBayes"</span>)
+set.seed(123)
 data(galaxies)
 galaxies2 <span style="color: #BFEBBF;">&lt;-</span> c(galaxies, galaxies + 5000)
 batch <span style="color: #BFEBBF;">&lt;-</span> rep(1:2, each=length(galaxies))
@@ -929,7 +933,7 @@ ztab <span style="color: #BFEBBF;">&lt;-</span> tableZ(3, z(fit))
 <div id="postamble" class="status">
 <p class="date">Date: 2015-07-17 Fri</p>
 <p class="author">Author: Rob Scharpf</p>
-<p class="date">Created: 2015-07-30 Thu 14:39</p>
+<p class="date">Created: 2015-07-30 Thu 14:47</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 24.5.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>

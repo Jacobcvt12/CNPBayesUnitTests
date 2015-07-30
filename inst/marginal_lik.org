@@ -8,10 +8,10 @@
 #+name: load_packages 
 #+begin_src R :tangle scripts/marginal_lik.R :session *R*
 library(RUnit)
-##library(CNPBayes)
 library(MASS)
 library(devtools)
 load_all("~/Software/CNPBayes")
+set.seed(123)
 #+end_src 
 
 * Galaxies data
@@ -55,14 +55,14 @@ method with bias correction.  The second argument to
 ~marginalLikelihood~ is the number of iterations used in the reduced
 Gibb's samplers.
 
-#+BEGIN_SRC R :tangle scripts/marginal_lik.R :session *R*
-  m.y <- marginalLikelihood(fit, 1000)
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R :session *R* :exports both
+  (m.y <- marginalLikelihood(fit, 1000))
   published.mlik <- -226.791  
   round(abs(m.y - published.mlik), 2)
 #+END_SRC
 
 #+RESULTS:
-: 1.26
+: 1.49
 
 ** Detailed calculations
 
