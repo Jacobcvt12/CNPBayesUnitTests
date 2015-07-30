@@ -5,7 +5,8 @@
 
 * Packages
 
-#+begin_src R :tangle scripts/marginal_lik.R
+#+name: load_packages 
+#+begin_src R :tangle scripts/marginal_lik.R :session *R*
 library(RUnit)
 ##library(CNPBayes)
 library(MASS)
@@ -15,57 +16,56 @@ load_all("~/Software/CNPBayes")
 
 * Galaxies data
 
-#+begin_src R :tangle scripts/marginal_lik.R
+#+name: galaxy_data
+#+begin_src R :tangle scripts/marginal_lik.R  :session *R*
 data(galaxies)
 #+end_src 
 
 Correct the 78th observation:
 
-#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R :session *R*
   galaxies[78] <- 26960
+  ##  galaxies <- c(galaxies, 5607)
 #+END_SRC
-
 
 * Marginal model
 ** Fit mixture model
 
 Start by fitting the 3 component mixture model
 
-#+begin_src R :tangle scripts/marginal_lik.R
-  mp <- McmcParams(thin=100, iter=1000, burnin=10000, nStarts=20)
-  hypp <- Hyperparameters(type="marginal", k=3)
+#+begin_src R :tangle scripts/marginal_lik.R :session *R*
+  mp <- McmcParams(thin=10, iter=1000, burnin=10000, nStarts=20)
+  hypp <- Hyperparameters(type="marginal", k=3, m2.0=100)
   model <- MarginalModel(data=galaxies/1000, k=3,
                          hypp=hypp,
                          mcmc.params=mp)
   fit <- posteriorSimulation(model)
   dm <- plot(fit, ylim=c(0, 0.4), breaks=50)
+  if(modes(fit)[["loglik"]] < -210){
+    stop("The modal log likelihood should be at least -210.")
+  }
   plot.ts(logPrior(chains(fit)))
 #+end_src
 
-The plot suggests 4 components may be a better fit.
+* Computing the marginal likelihood
+** Simple usage
 
-#+BEGIN_SRC R 
-  fit4 <- posteriorSimulation(model, k=4)
-  dm4 <- plot(fit4, ylim=c(0, 0.4), breaks=50)
+The following function computes the marginal likelihood using Chib's
+method with bias correction.  The second argument to
+~marginalLikelihood~ is the number of iterations used in the reduced
+Gibb's samplers.
+
+#+BEGIN_SRC R :tangle scripts/marginal_lik.R :session *R*
+  m.y <- marginalLikelihood(fit, 1000)
+  published.mlik <- -226.791  
+  round(abs(m.y - published.mlik), 2)
 #+END_SRC
 
+#+RESULTS:
+: 1.26
 
-** COMMENT Using CNPBayes function
+** Detailed calculations
 
-Compute the marginal likelihood for the K=3 model and compare to the
-published marginal likellihood for the 3-cluster model with unequal
-variance:
-
-#+BEGIN_SRC R :tangle scripts/marginal_lik.R
-  published.mlik <- -226.791
-  x <- computeMarginalLik(list(fit))$marginal
-  mlik <- x[[1]]["marginal"]
-  print(mlik)
-  tryCatch(checkEquals(as.numeric(mlik), published.mlik, tolerance=3),
-           error=function(e) "CNPBayes estimate not within tolerance")
-#+END_SRC
-
-** Computing the marginal likelihood
 The target posterior distribution is given by
 
 $$ p(\psi | y ) = \frac{p(y | \psi) p(\psi)}{m(y)},$$ where the
@@ -81,7 +81,7 @@ following section.  In all that follows, we assume that the chain has
 reached stationarity.  Convergence should be confirmed prior to
 estimating the marginal likelihood.
 
-** The data log likelihood and the log prior
+*** The data log likelihood and the log prior
 
 The log likelihood and log prior are straightforward to compute and we
 evaluate each at the modal ordinates, $\psi^*$.  There are several
@@ -153,7 +153,7 @@ of the model is given by $p(\theta | \mu, \tau) p(\sigma^2 | \nu_0,
   loglikAndPrior <- loglik + logprior
 #+END_SRC
 
-** Estimation of p(\psi^* | y)
+*** Estimation of p(\psi^* | y)
 
 
 The difference in the first two terms of the expression for the
@@ -318,7 +318,7 @@ with $\theta$ and $\sigma^2$ fixed was not run./
   ##ddirichlet(mp, 1+ztab)
 #+END_SRC
 
-** COMMENT Computing the marginal density
+*** COMMENT Computing the marginal density
 
 Since ~p.theta.rb~, ~p.sigma2.rb~, and ~p.pi.rb~ are already on the
 log scale, the Chib's estimate of the marginal density (log-scale) is
@@ -335,7 +335,7 @@ Bias correction and comparison to published value:
   m.bc - published.mlik
 #+END_SRC
 
-** Extension of block updates to second stage model parameters \mu, \tau^2, \nu_0, and \sigma_0^2.
+*** Extension of block updates to second stage model parameters \mu, \tau^2, \nu_0, and \sigma_0^2.
 
 *** Estimation of p(\mu | y, \theta^*, \sigma^{2*}, \pi^*)
 
@@ -509,7 +509,7 @@ conditional (with constraints).
   published.mlik - m.bc
 #+END_SRC
     
-** R wrapper for marginal likelihood
+*** R wrapper for marginal likelihood
 
 #+BEGIN_SRC R
   pstar <- matrix(NA, 7, 4)
@@ -524,7 +524,7 @@ conditional (with constraints).
   m.y <- marginalLikelihood(fit, 1000)
 #+END_SRC
 
-** Speed improvement
+*** Speed improvement
 
 - do not store the chains in the reduced Gibb's
 - do not permute the z-labels.  If we do, do it outside the
@@ -536,7 +536,9 @@ conditional (with constraints).
 Simulate a batch effect in the galaxy data.
 
 ** Construct BatchModel object and run Gibb's sampler
-#+BEGIN_SRC R
+#+BEGIN_SRC R :noweb yes :tangle scripts/batch_lik.R
+  <<load_packages>>
+  <<galaxy_data>>
   galaxies2 <- c(galaxies, galaxies + 5000)
   batch <- rep(1:2, each=length(galaxies))
   mp <- McmcParams(thin=10, iter=1000, burnin=10000, nStarts=20)
@@ -558,7 +560,7 @@ Simulate a batch effect in the galaxy data.
 The log likelihood and log prior are straightforward to compute and we
 evaluate each at the modal ordinates, $\psi^*$.  
 
-#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+#+BEGIN_SRC R 
   modal.ordinates <- modes(fit)
 #+END_SRC
 
@@ -567,7 +569,7 @@ evaluate each at the modal ordinates, $\psi^*$.
 The complete data log likelihood and log prior at the modal ordinates
 are given by 
 
-#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+#+BEGIN_SRC R :tangle scripts/batch_lik.R
   loglik <- modes(bmodel)[["loglik"]]
   bmodel2 <- useModes(bmodel)
   s2.loglik <- .Call("stageTwoLogLikBatch", bmodel2)
@@ -600,7 +602,7 @@ required for this estimate.  It does not matter whether we pass the
 object ~fit2~ or ~fit~ because the chains in these 2 objects are
 identical. 
 
-#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+#+BEGIN_SRC R :tangle scripts/batch_lik.R
   ## check:  values at or near zero
   ptheta.star <- .Call("marginal_theta_batch", bmodel2)
   (p.theta.rb <- log(mean(ptheta.star)))
@@ -714,7 +716,7 @@ from a **reduced** Gibb's sampler. The draws of $z$ are from [z | y,
 // It appears that in the current implementation, a reduced Gibb's
 with $\theta$ and $\sigma^2$ fixed was not run./
 
-#+BEGIN_SRC R :tangle scripts/marginal_lik.R
+#+BEGIN_SRC R :tangle scripts/batch_lik.R
   fit.pi.star <- fit
   mcmcParams(fit.pi.star, force=TRUE) <- mp.reduced
   fit.pi.star <- .Call("reduced_pi", fit.pi.star)
