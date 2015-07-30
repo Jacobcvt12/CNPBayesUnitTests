@@ -1,0 +1,937 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<title>Chib's estimation of the marginal density for a hierarchical finite normal mixture</title>
+<!-- 2015-07-30 Thu 14:39 -->
+<meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta  name="generator" content="Org-mode" />
+<meta  name="author" content="Rob Scharpf" />
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { color: green; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  pre.src-sh:before    { content: 'sh'; }
+  pre.src-bash:before  { content: 'sh'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-R:before     { content: 'R'; }
+  pre.src-perl:before  { content: 'Perl'; }
+  pre.src-java:before  { content: 'Java'; }
+  pre.src-sql:before   { content: 'SQL'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.right  { text-align: center;  }
+  th.left   { text-align: center;   }
+  th.center { text-align: center; }
+  td.right  { text-align: right;  }
+  td.left   { text-align: left;   }
+  td.center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara:nth-child(2) { display: inline; }
+  .footpara { display: block; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2013 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+<script type="text/javascript" src="http://orgmode.org/mathjax/MathJax.js"></script>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+    MathJax.Hub.Config({
+        // Only one of the two following lines, depending on user settings
+        // First allows browser-native MathML display, second forces HTML/CSS
+        //  config: ["MMLorHTML.js"], jax: ["input/TeX"],
+            jax: ["input/TeX", "output/HTML-CSS"],
+        extensions: ["tex2jax.js","TeX/AMSmath.js","TeX/AMSsymbols.js",
+                     "TeX/noUndefined.js"],
+        tex2jax: {
+            inlineMath: [ ["\\(","\\)"] ],
+            displayMath: [ ['$$','$$'], ["\\[","\\]"], ["\\begin{displaymath}","\\end{displaymath}"] ],
+            skipTags: ["script","noscript","style","textarea","pre","code"],
+            ignoreClass: "tex2jax_ignore",
+            processEscapes: false,
+            processEnvironments: true,
+            preview: "TeX"
+        },
+        showProcessingMessages: true,
+        displayAlign: "center",
+        displayIndent: "2em",
+
+        "HTML-CSS": {
+             scale: 100,
+             availableFonts: ["STIX","TeX"],
+             preferredFont: "TeX",
+             webFont: "TeX",
+             imageFont: "TeX",
+             showMathMenu: true,
+        },
+        MMLorHTML: {
+             prefer: {
+                 MSIE:    "MML",
+                 Firefox: "MML",
+                 Opera:   "HTML",
+                 other:   "HTML"
+             }
+        }
+    });
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Chib's estimation of the marginal density for a hierarchical finite normal mixture</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1. Packages</a></li>
+<li><a href="#sec-2">2. Galaxies data</a></li>
+<li><a href="#sec-3">3. Marginal model</a>
+<ul>
+<li><a href="#sec-3-1">3.1. Fit mixture model</a></li>
+</ul>
+</li>
+<li><a href="#sec-4">4. Computing the marginal likelihood</a>
+<ul>
+<li><a href="#sec-4-1">4.1. Simple usage</a></li>
+<li><a href="#sec-4-2">4.2. Detailed calculations</a>
+<ul>
+<li><a href="#sec-4-2-1">4.2.1. The data log likelihood and the log prior</a></li>
+<li><a href="#sec-4-2-2">4.2.2. Complete data log likelihood and log prior</a></li>
+<li><a href="#sec-4-2-3">4.2.3. Estimation of p(&psi;<sup>*</sup> | y)</a></li>
+<li><a href="#sec-4-2-4">4.2.4. Block updates</a></li>
+<li><a href="#sec-4-2-5">4.2.5. Extension of block updates to second stage model parameters &mu;, &tau;<sup>2</sup>, &nu;<sub>0</sub>, and &sigma;<sub>0</sub><sup>2</sup>.</a></li>
+<li><a href="#sec-4-2-6">4.2.6. Estimation of p(&mu; | y, &theta;<sup>*</sup>, &sigma;<sup>2*</sup>, &pi;<sup>*</sup>)</a></li>
+<li><a href="#sec-4-2-7">4.2.7. Estimation of p(&tau;2 | y, &theta;<sup>*</sup>, &sigma;<sup>2*</sup>, &pi;<sup>*</sup>, &mu;<sup>*</sup>)</a></li>
+<li><a href="#sec-4-2-8">4.2.8. Estimation of p(&nu;<sub>0</sub><sup>*</sup> | y, &theta;<sup>*</sup>, &sigma;<sup>2*</sup>, &pi;<sup>*</sup>, &tau;<sup>2*</sup>)</a></li>
+<li><a href="#sec-4-2-9">4.2.9. Estimation of p(&sigma;2<sub>0</sub><sup>*</sup> | y, &theta;<sup>*</sup>, &sigma;<sup>2*</sup>, &pi;<sup>*</sup>, &tau;<sup>2*</sup>, &nu;<sub>0</sub><sup>*</sup>)</a></li>
+<li><a href="#sec-4-2-10">4.2.10. R wrapper for marginal likelihood</a></li>
+<li><a href="#sec-4-2-11">4.2.11. Speed improvement</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#sec-5">5. Batch model</a>
+<ul>
+<li><a href="#sec-5-1">5.1. Construct BatchModel object and run Gibb's sampler</a></li>
+<li><a href="#sec-5-2">5.2. Compute the log likelihood and the log prior</a>
+<ul>
+<li><a href="#sec-5-2-1">5.2.1. Complete data log likelihood and log prior</a></li>
+<li><a href="#sec-5-2-2">5.2.2. Block updates</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-sec-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> Packages</h2>
+<div class="outline-text-2" id="text-1">
+<div class="org-src-container">
+
+<pre class="src src-R" id="load_packages"><span style="color: #BFEBBF;">library</span>(RUnit)
+<span style="color: #5F7F5F;">##</span><span style="color: #7F9F7F;">library(CNPBayes)</span>
+<span style="color: #BFEBBF;">library</span>(MASS)
+<span style="color: #BFEBBF;">library</span>(devtools)
+load_all(<span style="color: #CC9393;">"~/Software/CNPBayes"</span>)
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> Galaxies data</h2>
+<div class="outline-text-2" id="text-2">
+<div class="org-src-container">
+
+<pre class="src src-R" id="galaxy_data">data(galaxies)
+</pre>
+</div>
+
+<p>
+Correct the 78th observation:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">galaxies[78] <span style="color: #BFEBBF;">&lt;-</span> 26960
+<span style="color: #5F7F5F;">##  </span><span style="color: #7F9F7F;">galaxies &lt;- c(galaxies, 5607)</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> Marginal model</h2>
+<div class="outline-text-2" id="text-3">
+</div><div id="outline-container-sec-3-1" class="outline-3">
+<h3 id="sec-3-1"><span class="section-number-3">3.1</span> Fit mixture model</h3>
+<div class="outline-text-3" id="text-3-1">
+<p>
+Start by fitting the 3 component mixture model
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">mp <span style="color: #BFEBBF;">&lt;-</span> McmcParams(thin=10, iter=1000, burnin=10000, nStarts=20)
+hypp <span style="color: #BFEBBF;">&lt;-</span> Hyperparameters(type=<span style="color: #CC9393;">"marginal"</span>, k=3, m2.0=100)
+model <span style="color: #BFEBBF;">&lt;-</span> MarginalModel(data=galaxies/1000, k=3,
+                       hypp=hypp,
+                       mcmc.params=mp)
+fit <span style="color: #BFEBBF;">&lt;-</span> posteriorSimulation(model)
+dm <span style="color: #BFEBBF;">&lt;-</span> plot(fit, ylim=c(0, 0.4), breaks=50)
+<span style="color: #F0DFAF; font-weight: bold;">if</span>(modes(fit)[[<span style="color: #CC9393;">"loglik"</span>]] &lt; -210){
+  <span style="color: #F0DFAF; font-weight: bold;">stop</span>(<span style="color: #CC9393;">"The modal log likelihood should be at least -210."</span>)
+}
+plot.ts(logPrior(chains(fit)))
+</pre>
+</div>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-4" class="outline-2">
+<h2 id="sec-4"><span class="section-number-2">4</span> Computing the marginal likelihood</h2>
+<div class="outline-text-2" id="text-4">
+</div><div id="outline-container-sec-4-1" class="outline-3">
+<h3 id="sec-4-1"><span class="section-number-3">4.1</span> Simple usage</h3>
+<div class="outline-text-3" id="text-4-1">
+<p>
+The following function computes the marginal likelihood using Chib's
+method with bias correction.  The second argument to
+<code>marginalLikelihood</code> is the number of iterations used in the reduced
+Gibb's samplers.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">m.y <span style="color: #BFEBBF;">&lt;-</span> marginalLikelihood(fit, 1000)
+published.mlik <span style="color: #BFEBBF;">&lt;-</span> -226.791  
+abs(m.y - published.mlik)
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-4-2" class="outline-3">
+<h3 id="sec-4-2"><span class="section-number-3">4.2</span> Detailed calculations</h3>
+<div class="outline-text-3" id="text-4-2">
+<p>
+The target posterior distribution is given by
+</p>
+
+<p>
+$$ p(\psi | y ) = \frac{p(y | \psi) p(\psi)}{m(y)},$$ where the
+marginal likelihood is given by \(m(y)\).  We can rewrite this
+expression in terms of the marginal density for \(y\) as
+</p>
+
+<p>
+$$ log[m(y)] = log[p(y|\psi^*)] + log[p(\psi^*)] - log[p(\psi^* |
+y)]$$
+</p>
+
+<p>
+for any ordinate \(\psi^*\).  The first 2 terms on the RHS, the data log
+liklelihood and the prior, are known and we compute these in the
+following section.  In all that follows, we assume that the chain has
+reached stationarity.  Convergence should be confirmed prior to
+estimating the marginal likelihood.
+</p>
+</div>
+
+<div id="outline-container-sec-4-2-1" class="outline-4">
+<h4 id="sec-4-2-1"><span class="section-number-4">4.2.1</span> The data log likelihood and the log prior</h4>
+<div class="outline-text-4" id="text-4-2-1">
+<p>
+The log likelihood and log prior are straightforward to compute and we
+evaluate each at the modal ordinates, \(\psi^*\).  There are several
+ways to extract modal ordinates.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">modal.ordinates <span style="color: #BFEBBF;">&lt;-</span> modes(fit)
+print(modal.ordinates)
+<span style="color: #5F7F5F;">## </span><span style="color: #7F9F7F;">Update slots of the paramters in MarginalModel with the modal.ordinates</span>
+fit2 <span style="color: #BFEBBF;">&lt;-</span> useModes(fit)
+identical(theta(fit2), modal.ordinates[[<span style="color: #CC9393;">"theta"</span>]])
+identical(sigma2(fit2), modal.ordinates[[<span style="color: #CC9393;">"sigma2"</span>]])
+<span style="color: #5F7F5F;">## </span><span style="color: #7F9F7F;">Find the modal.ordinate using argMax, which looks at log lik *</span>
+<span style="color: #5F7F5F;">## </span><span style="color: #7F9F7F;">prior for each MCMC iteration</span>
+i <span style="color: #BFEBBF;">&lt;-</span> argMax(fit)
+thetas <span style="color: #BFEBBF;">&lt;-</span> theta(chains(fit))[i, ]
+identical(thetas, modal.ordinates[[<span style="color: #CC9393;">"theta"</span>]])
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-4-2-2" class="outline-4">
+<h4 id="sec-4-2-2"><span class="section-number-4">4.2.2</span> Complete data log likelihood and log prior</h4>
+<div class="outline-text-4" id="text-4-2-2">
+<p>
+The complete data log likelihood and log prior at the modal ordinates
+are given by 
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">loglik <span style="color: #BFEBBF;">&lt;-</span> modes(fit)[[<span style="color: #CC9393;">"loglik"</span>]]
+fit2 <span style="color: #BFEBBF;">&lt;-</span> useModes(fit)
+s2.loglik <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"stageTwoLogLik"</span>, fit2)
+logprior <span style="color: #BFEBBF;">&lt;-</span> modes(fit)[[<span style="color: #CC9393;">"logprior"</span>]]
+</pre>
+</div>
+
+
+<p>
+Alternatively, the data log likelihood calculation is implemented in
+  C++ and could be computed directly for the model at the modal
+  ordinates:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">(loglikC <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"loglik"</span>, fit2))
+stage2.loglik <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"stageTwoLogLik"</span>, fit2)
+loglikC <span style="color: #BFEBBF;">&lt;-</span> loglikC + stage2.loglik
+</pre>
+</div>
+
+<p>
+The joint prior is \(p(\sigma^2_0, \nu_0, \mu, \tau^2, \pi)\) and is
+factored as \(p(\sigma^2_0)p(\nu_0)p(\mu)p(\tau^2)p(\pi)\).
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">hypp <span style="color: #BFEBBF;">&lt;-</span> hyperParams(fit2)
+eta.0 <span style="color: #BFEBBF;">&lt;-</span> CNPBayes:::eta.0(hypp)
+m2.0 <span style="color: #BFEBBF;">&lt;-</span> CNPBayes:::m2.0(hypp)
+lpriorR <span style="color: #BFEBBF;">&lt;-</span> log(dgeom(nu.0(fit2), CNPBayes:::betas(hypp))) +
+    log(dgamma(CNPBayes:::sigma2.0(fit2), CNPBayes:::a(hypp), CNPBayes:::b(hypp))) +
+        log(dnorm(mu(fit2), CNPBayes:::mu.0(hypp), sqrt(CNPBayes:::tau2.0(hypp)))) +
+            log(dgamma(1/tau2(fit2), 1/2*eta.0, 1/2*eta.0*m2.0)) +
+                log(gtools::ddirichlet(p(fit2), CNPBayes:::alpha(hypp)))
+lpriorC <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"compute_logprior"</span>, fit2)
+checkIdentical(lpriorR, lpriorC)
+</pre>
+</div>
+
+<p>
+The likelihood of the population-level parameters at the second stage
+of the model is given by \(p(\theta | \mu, \tau) p(\sigma^2 | \nu_0,
+\sigma_0^2)\). We compute this in R
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R" id="stage2_loglik">n0 <span style="color: #BFEBBF;">&lt;-</span> CNPBayes:::nu.0(fit2)
+sigma2.0 <span style="color: #BFEBBF;">&lt;-</span> CNPBayes:::sigma2.0(fit2)
+stage2.loglik <span style="color: #BFEBBF;">&lt;-</span> sum(log(dnorm(theta(fit2), mu(fit2), tau(fit2)) *
+                             dgamma(1/sigma2(fit2), 1/2*n0, 1/2*n0*sigma2.0)))
+loglikAndPrior <span style="color: #BFEBBF;">&lt;-</span> loglik + logprior
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-4-2-3" class="outline-4">
+<h4 id="sec-4-2-3"><span class="section-number-4">4.2.3</span> Estimation of p(&psi;<sup>*</sup> | y)</h4>
+<div class="outline-text-4" id="text-4-2-3">
+<p>
+The difference in the first two terms of the expression for the
+marginal density (that includes the second stage likelihood) and the
+tabled value for the true log marginal density should correspond to
+the true posterior probability at the modal ordinates \(\psi^*\).
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">true.posterior <span style="color: #BFEBBF;">&lt;-</span> loglikAndPrior - published.mlik
+</pre>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-sec-4-2-4" class="outline-4">
+<h4 id="sec-4-2-4"><span class="section-number-4">4.2.4</span> Block updates</h4>
+<div class="outline-text-4" id="text-4-2-4">
+<p>
+The objective is to estimate \(p(\theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*, \nu_0^*, \sigma_0^{2*} | y)\),
+which can be expressed as
+</p>
+
+<p>
+$$  p(\theta^* | y ) p(\sigma^{2*} | y, \theta^*) p(\pi^* | y, \theta^*, \sigma^{2*}) p(\mu^* | y, \theta^*, \sigma^{2*}, \pi^*)p(\tau^*| \theta^*, \sigma^{2*}, \pi^*, \mu^*) 
+p(\tau^*| \theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*) p(\nu_0^*| \theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*)p(\sigma_0^{2*}| \theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*, \nu_0^*)
+$$
+</p>
+
+<p>
+The first term is
+</p>
+
+<p>
+$$ p(\theta^* | y ) = \int p(\theta^* | y, \sigma^2, \pi, z, \ldots) p(\sigma^2, \pi, z | y, \ldots)d(\sigma^2, \mu, \pi, z, \dots)$$
+</p>
+</div>
+
+<ol class="org-ol"><li><a id="sec-4-2-4-1" name="sec-4-2-4-1"></a>Estimation of p(&theta;<sup>*</sup> | y)<br  /><div class="outline-text-5" id="text-4-2-4-1">
+<p>
+An estimate for the first term is obtained by taking an ergodic average of
+</p>
+
+<p>
+$$p(\theta^* | y, \sigma^{2(s)}, z^{(s)}),$$
+</p>
+
+<p>
+using the posterior draws of (&sigma;<sup>2</sup>, &pi;, z). No additional MCMC is
+required for this estimate.  It does not matter whether we pass the
+object <code>fit2</code> or <code>fit</code> because the chains in these 2 objects are
+identical. 
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">ptheta.star <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"marginal_theta"</span>, fit2)
+(p.theta.rb <span style="color: #BFEBBF;">&lt;-</span> log(mean(ptheta.star)))
+</pre>
+</div>
+</div>
+</li>
+
+<li><a id="sec-4-2-4-2" name="sec-4-2-4-2"></a>Estimation of \(p(\sigma^{2*} | y, \theta^*)\)<br  /><div class="outline-text-5" id="text-4-2-4-2">
+<p>
+Note
+</p>
+
+<p>
+$$p(\sigma^{2*} | y, \theta^*)  = \int p(\sigma^{2*} | y, \theta^*, \pi, z) p(\pi, z | y, \theta^*)d\pi dz.$$ 
+</p>
+
+<p>
+To estimate \(p(\sigma^{2*} | y)\), we take an ergodic average of
+\(p(\sigma^{2*} | y, \pi^{(s)}, z^{(s)})\) using draws of (&pi;, z) from
+a <b><b>reduced</b></b> Gibb's sampler. ** It is important to have draws of \(z\)
+from [z | y, &theta;*] (not [z | y]) and draws of \(\pi\) from [&pi; | y,
+&theta;*].
+</p>
+
+<p>
+We allow the user to run fewer MCMC iterations in the reduced Gibbs by
+ specifying an integer value for the argument \(T2\) of the
+ <code>computeMarginalLik</code> function.  The C++ function for the reduced
+ Gibb's is called below.
+</p>
+
+<p>
+<b><b>Refactoring needed:</b></b> 
+</p>
+
+<ul class="org-ul">
+<li><i>This function is poorly named. Not sure why 'permutedz' is in the
+name</i>.
+</li>
+
+<li>Much of the code in <code>.pthetastar</code> is for permuting the modes.  This
+should be removed from estimation of the marginal density.  In
+particular, we should calculate the marginal density for whatever
+ordering of modes is passed in the MarginalModel object.  Permuting
+to a different set of modes would be a method defined for marginal
+model that is irrelevant for the computation of Gibb's.
+</li>
+
+<li>Check whether any of the methods for running the reduced Gibb's are
+outdated and can be removed
+</li>
+</ul>
+
+<div class="org-src-container">
+
+<pre class="src src-R">T <span style="color: #BFEBBF;">&lt;-</span> 500
+mp.reduced <span style="color: #BFEBBF;">&lt;-</span> McmcParams(iter=T, thin=2, burnin=0)
+fit.psigma2 <span style="color: #BFEBBF;">&lt;-</span> fit
+mcmcParams(fit.psigma2, force=<span style="color: #7CB8BB;">TRUE</span>) <span style="color: #BFEBBF;">&lt;-</span> mp.reduced
+<span style="color: #5F7F5F;">## </span><span style="color: #7F9F7F;">I do not recall why z is not updated.</span>
+<span style="color: #5F7F5F;">##</span><span style="color: #7F9F7F;">fit.psigma2 &lt;- .Call("permutedz_reduced1", object)</span>
+fit.psigma2 <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"reduced_sigma"</span>, fit.psigma2)
+p.sigma2 <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"p_sigma_reduced"</span>, fit.psigma2)
+p.sigma.rb <span style="color: #BFEBBF;">&lt;-</span> log(mean(p.sigma2))
+</pre>
+</div>
+</div>
+</li>
+
+<li><a id="sec-4-2-4-3" name="sec-4-2-4-3"></a>Estimation of \(p(\pi^* | y, \theta^*, \sigma^{2*})\)<br  /><div class="outline-text-5" id="text-4-2-4-3">
+<p>
+We write the third term as
+</p>
+
+<p>
+$$p(\pi^{*} | y, \theta^*, \sigma^{2*})  = \int p(\pi^* | y, \theta^*, \sigma^{2*}, z) p(z | y, \theta^*, \sigma^{2*})dz.$$ 
+</p>
+
+<p>
+To estimate \(p(\pi^{*} | y)\), we take an ergodic average of
+\(p(\pi^{*} | y, \theta^*, \sigma^{2*}, z^{(s)})\) using draws of $z
+from a <b><b>reduced</b></b> Gibb's sampler. The draws of \(z\) are from [z | y,
+&theta;<sup>*</sup>, &sigma;<sup>2*</sup>]. The C function for simulating from [z|theta<sup>*</sup>,
+&sigma;<sup>2*</sup>] is implemented in C+++.
+</p>
+
+<p>
+<i>/ It appears that in the current implementation, a reduced Gibb's
+with \(\theta\) and \(\sigma^2\) fixed was not run.</i>
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">fit.pi.star <span style="color: #BFEBBF;">&lt;-</span> fit
+mcmcParams(fit.pi.star, force=<span style="color: #7CB8BB;">TRUE</span>) <span style="color: #BFEBBF;">&lt;-</span> mp.reduced
+fit.pi.star <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"reduced_pi"</span>, fit.pi.star)
+identical(modes(fit.pi.star), modes(fit))
+p.pi.star <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"p_pmix_reduced"</span>, fit.pi.star)
+(p.pi.rb <span style="color: #BFEBBF;">&lt;-</span> log(mean(p.pi.star)))
+<span style="color: #5F7F5F;">## </span><span style="color: #7F9F7F;">check</span>
+zz <span style="color: #BFEBBF;">&lt;-</span> z(chains(fit.pi.star))
+gtools::ddirichlet(modes(fit)[[<span style="color: #CC9393;">"mixprob"</span>]], alpha(hypp) + table(zz[2,]))
+mp <span style="color: #BFEBBF;">&lt;-</span> modes(fit)[[<span style="color: #CC9393;">"mixprob"</span>]]
+ztab <span style="color: #BFEBBF;">&lt;-</span> tableZ(3, z(fit))
+<span style="color: #5F7F5F;">##</span><span style="color: #7F9F7F;">ddirichlet(mp, 1+ztab)</span>
+</pre>
+</div>
+</div>
+</li></ol>
+</div>
+
+<div id="outline-container-sec-4-2-5" class="outline-4">
+<h4 id="sec-4-2-5"><span class="section-number-4">4.2.5</span> Extension of block updates to second stage model parameters &mu;, &tau;<sup>2</sup>, &nu;<sub>0</sub>, and &sigma;<sub>0</sub><sup>2</sup>.</h4>
+</div>
+
+<div id="outline-container-sec-4-2-6" class="outline-4">
+<h4 id="sec-4-2-6"><span class="section-number-4">4.2.6</span> Estimation of p(&mu; | y, &theta;<sup>*</sup>, &sigma;<sup>2*</sup>, &pi;<sup>*</sup>)</h4>
+<div class="outline-text-4" id="text-4-2-6">
+<p>
+We have
+</p>
+
+<p>
+$$p(\mu^* | y, \theta^*, \sigma^{2*}, \pi^*) = \int p(\mu^{*} | y, \theta^*, \sigma^{2*}, \pi^*, \tau^{2}, \nu_0, \sigma_0^2, z)   p(\tau^{2}, \nu_0, \sigma_0^2, z | y, \theta^*, \sigma^{2*}\pi^*)d\tau^2d \nu_0 d \sigma_0^2 dz.$$ 
+</p>
+
+<p>
+To estimate \(p(\mu^{*} | y, y, \theta^, \sigma^{2*}, \pi^*)\), we take
+an ergodic average of \(p(\pi^{*} | y, \theta^*, \sigma^{2*},
+\tau^{2(s)}, \nu_0^{(s)}, \sigma_0^{2(s)}, z^{(s)})\) using draws of
+\(z\) from a <b><b>reduced</b></b> Gibb's sampler. The draws of \(z\) are from [z |
+y, &theta;<sup>*</sup>, &sigma;<sup>2*</sup>, &pi;<sup>*</sup>]. The function for simulating is
+implemented in C++.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">fit.mustar <span style="color: #BFEBBF;">&lt;-</span> fit
+mcmcParams(fit.mustar, force=<span style="color: #7CB8BB;">TRUE</span>) <span style="color: #BFEBBF;">&lt;-</span> mp.reduced
+fit.mustar <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"reduced_mu"</span>, fit.mustar)
+identical(modes(fit.mustar), modes(fit))
+<span style="color: #5F7F5F;">##</span><span style="color: #7F9F7F;">tau2s &lt;- tau2(chains(fit.mustar))</span>
+p.mustar <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"p_mu_reduced"</span>, fit.mustar)
+(p.mu.rb <span style="color: #BFEBBF;">&lt;-</span> log(mean(p.mustar)))
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-4-2-7" class="outline-4">
+<h4 id="sec-4-2-7"><span class="section-number-4">4.2.7</span> Estimation of p(&tau;2 | y, &theta;<sup>*</sup>, &sigma;<sup>2*</sup>, &pi;<sup>*</sup>, &mu;<sup>*</sup>)</h4>
+<div class="outline-text-4" id="text-4-2-7">
+<div class="org-src-container">
+
+<pre class="src src-R">fit.taustar <span style="color: #BFEBBF;">&lt;-</span> fit
+mcmcParams(fit.taustar, force=<span style="color: #7CB8BB;">TRUE</span>) <span style="color: #BFEBBF;">&lt;-</span> mp.reduced
+fit.taustar <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"reduced_tau"</span>, fit.taustar)
+identical(modes(fit.taustar), modes(fit))
+p.taustar <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"p_tau_reduced"</span>, fit.mustar)
+<span style="color: #5F7F5F;">##</span>
+<span style="color: #5F7F5F;">## </span><span style="color: #7F9F7F;">There is only 1 value for p.taustar -- we did not need a chain.</span>
+<span style="color: #5F7F5F;">## </span><span style="color: #7F9F7F;">'reduced_tau' may be unnecessary</span>
+<span style="color: #5F7F5F;">##</span>
+(p.tau.rb <span style="color: #BFEBBF;">&lt;-</span> log(p.taustar))
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-4-2-8" class="outline-4">
+<h4 id="sec-4-2-8"><span class="section-number-4">4.2.8</span> Estimation of p(&nu;<sub>0</sub><sup>*</sup> | y, &theta;<sup>*</sup>, &sigma;<sup>2*</sup>, &pi;<sup>*</sup>, &tau;<sup>2*</sup>)</h4>
+<div class="outline-text-4" id="text-4-2-8">
+<p>
+\(\nu_0\) does not have a conjugate prior &#x2013; we sample from an
+un-normalized probability distribution.  As \(\nu_0\) is restricted to
+an integer value, we simply compute the un-normalized probabilities
+for integers 1, \ldots, 100 and scale the un-normalized probability
+at \(\nu_0^*\) by the total of the un-normalized probabilities.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">fit.nu0star <span style="color: #BFEBBF;">&lt;-</span> fit
+mcmcParams(fit.nu0star, force=<span style="color: #7CB8BB;">TRUE</span>) <span style="color: #BFEBBF;">&lt;-</span> mp.reduced
+fit.nu0star <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"reduced_nu0"</span>, fit.nu0star)
+identical(modes(fit.nu0star), modes(fit))
+p.nu0star <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"p_nu0_reduced"</span>, fit.nu0star)
+(p.nu0.rb <span style="color: #BFEBBF;">&lt;-</span> log(mean(p.nu0star)))
+</pre>
+</div>
+
+<div class="org-src-container">
+
+<pre class="src src-R">p.star = p.theta.rb + p.sigma.rb + p.pi.rb + p.mu.rb + p.tau.rb + p.nu0.rb
+(m.y <span style="color: #BFEBBF;">&lt;-</span> loglikAndPrior - p.star)
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-4-2-9" class="outline-4">
+<h4 id="sec-4-2-9"><span class="section-number-4">4.2.9</span> Estimation of p(&sigma;2<sub>0</sub><sup>*</sup> | y, &theta;<sup>*</sup>, &sigma;<sup>2*</sup>, &pi;<sup>*</sup>, &tau;<sup>2*</sup>, &nu;<sub>0</sub><sup>*</sup>)</h4>
+<div class="outline-text-4" id="text-4-2-9">
+<div class="org-src-container">
+
+<pre class="src src-R">fit.s20star <span style="color: #BFEBBF;">&lt;-</span> fit
+mcmcParams(fit.s20star, force=<span style="color: #7CB8BB;">TRUE</span>) <span style="color: #BFEBBF;">&lt;-</span> mp.reduced
+fit.s20star <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"reduced_s20"</span>, fit.s20star)
+p.s20star <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"p_s20_reduced"</span>, fit.s20star)
+p.s20.rb <span style="color: #BFEBBF;">&lt;-</span> log(p.s20star)
+</pre>
+</div>
+
+<div class="org-src-container">
+
+<pre class="src src-R">p.star = p.theta.rb + p.sigma.rb + p.pi.rb + p.mu.rb + p.tau.rb + p.nu0.rb + p.s20.rb
+(m.y <span style="color: #BFEBBF;">&lt;-</span> loglikAndPrior - p.star)
+m.bc <span style="color: #BFEBBF;">&lt;-</span> m.y - log(factorial(3))
+published.mlik - m.bc
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-4-2-10" class="outline-4">
+<h4 id="sec-4-2-10"><span class="section-number-4">4.2.10</span> R wrapper for marginal likelihood</h4>
+<div class="outline-text-4" id="text-4-2-10">
+<div class="org-src-container">
+
+<pre class="src src-R">pstar <span style="color: #BFEBBF;">&lt;-</span> matrix(<span style="color: #7CB8BB;">NA</span>, 7, 4)
+tmp <span style="color: #BFEBBF;">&lt;-</span> blockUpdates(fit, McmcParams(iter=1))
+rownames(pstar) <span style="color: #BFEBBF;">&lt;-</span> names(tmp)
+pstar[, 1] <span style="color: #BFEBBF;">&lt;-</span> blockUpdates(fit, McmcParams(iter=500))
+pstar[, 2] <span style="color: #BFEBBF;">&lt;-</span> blockUpdates(fit, McmcParams(iter=1000))
+pstar[, 3] <span style="color: #BFEBBF;">&lt;-</span> blockUpdates(fit, McmcParams(iter=5000))
+pstar[, 4] <span style="color: #BFEBBF;">&lt;-</span> blockUpdates(fit, McmcParams(iter=10000))
+round(pstar, 3)
+all(matrixStats::rowSds(pstar) &lt; 0.1)
+m.y <span style="color: #BFEBBF;">&lt;-</span> marginalLikelihood(fit, 1000)
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-4-2-11" class="outline-4">
+<h4 id="sec-4-2-11"><span class="section-number-4">4.2.11</span> Speed improvement</h4>
+<div class="outline-text-4" id="text-4-2-11">
+<ul class="org-ul">
+<li>do not store the chains in the reduced Gibb's
+</li>
+<li>do not permute the z-labels.  If we do, do it outside the
+computation of the marginal density.  Only reasonable time to do
+this is if there is not a clear winner.
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-5" class="outline-2">
+<h2 id="sec-5"><span class="section-number-2">5</span> Batch model</h2>
+<div class="outline-text-2" id="text-5">
+<p>
+Simulate a batch effect in the galaxy data.
+</p>
+</div>
+
+<div id="outline-container-sec-5-1" class="outline-3">
+<h3 id="sec-5-1"><span class="section-number-3">5.1</span> Construct BatchModel object and run Gibb's sampler</h3>
+<div class="outline-text-3" id="text-5-1">
+<div class="org-src-container">
+
+<pre class="src src-R"><span style="color: #BFEBBF;">library</span>(RUnit)
+<span style="color: #5F7F5F;">##</span><span style="color: #7F9F7F;">library(CNPBayes)</span>
+<span style="color: #BFEBBF;">library</span>(MASS)
+<span style="color: #BFEBBF;">library</span>(devtools)
+load_all(<span style="color: #CC9393;">"~/Software/CNPBayes"</span>)
+data(galaxies)
+galaxies2 <span style="color: #BFEBBF;">&lt;-</span> c(galaxies, galaxies + 5000)
+batch <span style="color: #BFEBBF;">&lt;-</span> rep(1:2, each=length(galaxies))
+mp <span style="color: #BFEBBF;">&lt;-</span> McmcParams(thin=10, iter=1000, burnin=10000, nStarts=20)
+<span style="color: #5F7F5F;">##</span>
+<span style="color: #5F7F5F;">## </span><span style="color: #7F9F7F;">Must make the priors much more uninformative</span>
+<span style="color: #5F7F5F;">##</span>
+hypp <span style="color: #BFEBBF;">&lt;-</span> Hyperparameters(type=<span style="color: #CC9393;">"batch"</span>, k=3, m2.0=6, eta.0=1.8)
+model <span style="color: #BFEBBF;">&lt;-</span> BatchModel(data=galaxies2/1000,
+                    batch=batch,
+                    k=3,
+                    hypp=hypp,
+                    mcmc.params=mp)
+bmodel <span style="color: #BFEBBF;">&lt;-</span> posteriorSimulation(model)
+plot(bmodel, breaks=80)
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-5-2" class="outline-3">
+<h3 id="sec-5-2"><span class="section-number-3">5.2</span> Compute the log likelihood and the log prior</h3>
+<div class="outline-text-3" id="text-5-2">
+<p>
+The log likelihood and log prior are straightforward to compute and we
+evaluate each at the modal ordinates, \(\psi^*\).  
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">modal.ordinates <span style="color: #BFEBBF;">&lt;-</span> modes(fit)
+</pre>
+</div>
+</div>
+
+<div id="outline-container-sec-5-2-1" class="outline-4">
+<h4 id="sec-5-2-1"><span class="section-number-4">5.2.1</span> Complete data log likelihood and log prior</h4>
+<div class="outline-text-4" id="text-5-2-1">
+<p>
+The complete data log likelihood and log prior at the modal ordinates
+are given by 
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">loglik <span style="color: #BFEBBF;">&lt;-</span> modes(bmodel)[[<span style="color: #CC9393;">"loglik"</span>]]
+bmodel2 <span style="color: #BFEBBF;">&lt;-</span> useModes(bmodel)
+s2.loglik <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"stageTwoLogLikBatch"</span>, bmodel2)
+complete.loglik <span style="color: #BFEBBF;">&lt;-</span> loglik + s2.loglik
+logprior <span style="color: #BFEBBF;">&lt;-</span> modes(bmodel2)[[<span style="color: #CC9393;">"logprior"</span>]]
+loglikAndPrior <span style="color: #BFEBBF;">&lt;-</span> complete.loglik + logprior
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-5-2-2" class="outline-4">
+<h4 id="sec-5-2-2"><span class="section-number-4">5.2.2</span> Block updates</h4>
+<div class="outline-text-4" id="text-5-2-2">
+<p>
+The objective is to estimate \(p(\theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*, \nu_0^*, \sigma_0^{2*} | y)\),
+which can be expressed as
+</p>
+
+<p>
+$$  p(\theta^* | y ) p(\sigma^{2*} | y, \theta^*) p(\pi^* | y, \theta^*, \sigma^{2*}) p(\mu^* | y, \theta^*, \sigma^{2*}, \pi^*)p(\tau^*| \theta^*, \sigma^{2*}, \pi^*, \mu^*) 
+p(\tau^*| \theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*) p(\nu_0^*| \theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*)p(\sigma_0^{2*}| \theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*, \nu_0^*)
+$$
+</p>
+
+<p>
+The first term is
+</p>
+
+<p>
+$$ p(\theta^* | y ) = \int p(\theta^* | y, \sigma^2, \pi, z, \ldots) p(\sigma^2, \pi, z | y, \ldots)d(\sigma^2, \mu, \pi, z, \dots)$$
+</p>
+</div>
+
+<ol class="org-ol"><li><a id="sec-5-2-2-1" name="sec-5-2-2-1"></a>Estimation of p(&theta;<sup>*</sup> | y)<br  /><div class="outline-text-5" id="text-5-2-2-1">
+<p>
+An estimate for the first term is obtained by taking an ergodic average of
+</p>
+
+<p>
+$$p(\theta^* | y, \sigma^{2(s)}, z^{(s)}),$$
+</p>
+
+<p>
+using the posterior draws of (&sigma;<sup>2</sup>, &pi;, z). No additional MCMC is
+required for this estimate.  It does not matter whether we pass the
+object <code>fit2</code> or <code>fit</code> because the chains in these 2 objects are
+identical. 
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R"><span style="color: #5F7F5F;">## </span><span style="color: #7F9F7F;">check:  values at or near zero</span>
+ptheta.star <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"marginal_theta_batch"</span>, bmodel2)
+(p.theta.rb <span style="color: #BFEBBF;">&lt;-</span> log(mean(ptheta.star)))
+</pre>
+</div>
+</div>
+</li>
+
+<li><a id="sec-5-2-2-2" name="sec-5-2-2-2"></a>Estimation of \(p(\pi^* | y, \theta^*, \sigma^{2*})\)<br  /><div class="outline-text-5" id="text-5-2-2-2">
+<p>
+We write the third term as
+</p>
+
+<p>
+$$p(\pi^{*} | y, \theta^*, \sigma^{2*})  = \int p(\pi^* | y, \theta^*, \sigma^{2*}, z) p(z | y, \theta^*, \sigma^{2*})dz.$$ 
+</p>
+
+<p>
+To estimate \(p(\pi^{*} | y)\), we take an ergodic average of
+\(p(\pi^{*} | y, \theta^*, \sigma^{2*}, z^{(s)})\) using draws of $z
+from a <b><b>reduced</b></b> Gibb's sampler. The draws of \(z\) are from [z | y,
+&theta;<sup>*</sup>, &sigma;<sup>2*</sup>]. The C function for simulating from [z|theta<sup>*</sup>,
+&sigma;<sup>2*</sup>] is implemented in C+++.
+</p>
+
+<p>
+<i>/ It appears that in the current implementation, a reduced Gibb's
+with \(\theta\) and \(\sigma^2\) fixed was not run.</i>
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-R">fit.pi.star <span style="color: #BFEBBF;">&lt;-</span> fit
+mcmcParams(fit.pi.star, force=<span style="color: #7CB8BB;">TRUE</span>) <span style="color: #BFEBBF;">&lt;-</span> mp.reduced
+fit.pi.star <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"reduced_pi"</span>, fit.pi.star)
+identical(modes(fit.pi.star), modes(fit))
+p.pi.star <span style="color: #BFEBBF;">&lt;-</span> .Call(<span style="color: #CC9393;">"p_pmix_reduced"</span>, fit.pi.star)
+(p.pi.rb <span style="color: #BFEBBF;">&lt;-</span> log(mean(p.pi.star)))
+<span style="color: #5F7F5F;">## </span><span style="color: #7F9F7F;">check</span>
+zz <span style="color: #BFEBBF;">&lt;-</span> z(chains(fit.pi.star))
+gtools::ddirichlet(modes(fit)[[<span style="color: #CC9393;">"mixprob"</span>]], alpha(hypp) + table(zz[2,]))
+mp <span style="color: #BFEBBF;">&lt;-</span> modes(fit)[[<span style="color: #CC9393;">"mixprob"</span>]]
+ztab <span style="color: #BFEBBF;">&lt;-</span> tableZ(3, z(fit))
+<span style="color: #5F7F5F;">##</span><span style="color: #7F9F7F;">ddirichlet(mp, 1+ztab)</span>
+</pre>
+</div>
+</div>
+</li></ol>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="date">Date: 2015-07-17 Fri</p>
+<p class="author">Author: Rob Scharpf</p>
+<p class="date">Created: 2015-07-30 Thu 14:39</p>
+<p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 24.5.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>
