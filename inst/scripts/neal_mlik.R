@@ -1,8 +1,9 @@
 library(MASS)
 data(galaxies)
 galaxies[78] <- 26960
+galaxies <- galaxies/1000
 
-N <- 1000000
+N <- 10000000
 
 p <- runif(N)
 v <- rgamma(N,1/3)/20

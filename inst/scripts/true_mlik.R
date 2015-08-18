@@ -3,13 +3,14 @@ library(MASS)
 
 ### data
 data(galaxies)
-galaxies[78] <-26960
+galaxies[78] <- 26960
+galaxies <- galaxies/1000
 
-#  nsim <- 5e7
- nsim <- 5e6
+nsim <- 5e7
+#  nsim <- 5e6
 
 ## hyperparams
-mu.0 <- 20
+mu.0 <- 0
 tau2.0 <- 100
 eta.0 <- 1
 m2.0 <- 0.1
@@ -39,18 +40,12 @@ p <- rdirichlet(nsim, alpha)
 
 
 l <- rep(1, nsim) # vector of likelihoods
-for(y in galaxies) {
-    l <- l *  (p[,1]*sqrt(1/(2*sigma2[,1]*pi)) * exp(-(y - theta[,1])^2/(2*sigma2[,1]))
-              +p[,2]*sqrt(1/(2*sigma2[,2]*pi)) * exp(-(y - theta[,2])^2/(2*sigma2[,2])) 
-              +p[,3]*sqrt(1/(2*sigma2[,3]*pi)) * exp(-(y - theta[,3])^2/(2*sigma2[,3])) )
-}
 
-## dnorm possibly less stable than writing out normal density
-# for(y in yg) {
-#     l <- l* ( p[,1]*dnorm(y, mean=theta[,1], sd=sqrt(sigma2[,1])) + 
-#              p[,2]*dnorm(y, mean=theta[,2], sd=sqrt(sigma2[,2])) + 
-#              p[,3]*dnorm(y, mean=theta[,3], sd=sqrt(sigma2[,3])))
-# }
+for(y in galaxies) {
+    l <- l*(p[,1]*dnorm(galaxies, mean=theta[,1], sd=sqrt(sigma2[,1])) +
+            p[,2]*dnorm(galaxies, mean=theta[,2], sd=sqrt(sigma2[,2])) +
+            p[,3]*dnorm(galaxies, mean=theta[,3], sd=sqrt(sigma2[,3])))
+}
 
 mlik <- log(mean(l))
 e <- sqrt(var(l)/nsim)
