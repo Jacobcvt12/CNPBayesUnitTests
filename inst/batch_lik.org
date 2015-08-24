@@ -114,7 +114,7 @@ are given by
 #+BEGIN_SRC R :tangle scripts/batch_lik.R
   loglik <- modes(fit)[["loglik"]]
   fit2 <- useModes(fit)
-  s2.loglik <- .Call("stageTwoLogLik", fit2)
+  s2.loglik <- stageTwoLogLikBatch(fit2)
   logprior <- modes(fit)[["logprior"]]
 #+END_SRC
 
@@ -124,8 +124,8 @@ Alternatively, the data log likelihood calculation is implemented in
   ordinates:
 
 #+BEGIN_SRC R :tangle scripts/batch_lik.R
-  (loglikC <- .Call("loglik", fit2))
-  stage2.loglik <- .Call("stageTwoLogLik", fit2)
+  (loglikC <- compute_loglik_batch(fit2))
+  stage2.loglik <- stageTwoLogLikBatch(fit2)
   loglikC <- loglikC + stage2.loglik
 #+END_SRC
 
@@ -136,12 +136,11 @@ factored as $p(\sigma^2_0)p(\nu_0)p(\mu)p(\tau^2)p(\pi)$.
   hypp <- hyperParams(fit2)
   eta.0 <- CNPBayes:::eta.0(hypp)
   m2.0 <- CNPBayes:::m2.0(hypp)
-  lpriorR <- log(dgeom(nu.0(fit2), CNPBayes:::betas(hypp))) +
-      log(dgamma(CNPBayes:::sigma2.0(fit2), CNPBayes:::a(hypp), CNPBayes:::b(hypp))) +
-          log(dnorm(mu(fit2), CNPBayes:::mu.0(hypp), sqrt(CNPBayes:::tau2.0(hypp)))) +
-              log(dgamma(1/tau2(fit2), 1/2*eta.0, 1/2*eta.0*m2.0)) +
-                  log(gtools::ddirichlet(p(fit2), CNPBayes:::alpha(hypp)))
-  lpriorC <- .Call("compute_logprior", fit2)
+  lpriorR <- sum(log(dnorm(mu(fit2), CNPBayes:::mu.0(hypp), sqrt(CNPBayes:::tau2.0(hypp))))) +
+    log(dgamma(CNPBayes:::sigma2.0(fit2), CNPBayes:::a(hypp), CNPBayes:::b(hypp))) +
+    log(dgeom(nu.0(fit2), CNPBayes:::betas(hypp)))
+
+  lpriorC <- compute_logprior_batch(fit2)
   checkIdentical(lpriorR, lpriorC)
 #+END_SRC
 
