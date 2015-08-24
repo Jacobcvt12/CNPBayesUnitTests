@@ -153,7 +153,7 @@ of the model is given by $p(\theta | \mu, \tau) p(\sigma^2 | \nu_0,
   n0 <- CNPBayes:::nu.0(fit2)
   sigma2.0 <- CNPBayes:::sigma2.0(fit2)
   stage2.loglik <- sum(log(dnorm(theta(fit2), mu(fit2), tau(fit2)) *
-                               dgamma(1/sigma2(fit2), 1/2*n0, 1/2*n0*sigma2.0)))
+                           dgamma(1/sigma2(fit2), 1/2*n0, 1/2*n0*sigma2.0)))
   loglikAndPrior <- loglik + logprior
 #+END_SRC
 
