@@ -25,6 +25,7 @@ Correct the 78th observation:
 
 #+BEGIN_SRC R :tangle scripts/batch_lik.R :session *R*
   galaxies[78] <- 26960
+  galaxies <- c(galaxies, galaxies + 500)
   ##  galaxies <- c(galaxies, 5607)
 #+END_SRC
 
@@ -38,16 +39,18 @@ Start by fitting the 3 component mixture model
   hypp <- Hyperparameters(type="batch", k=3, m2.0=100)
   model <- BatchModel(data=galaxies/1000, k=3,
                       hypp=hypp,
+                      batch=c(rep(1, length(galaxies) / 2),
+                              rep(2, length(galaxies) / 2)),
                       mcmc.params=mp)
   fit <- posteriorSimulation(model)
   dm <- plot(fit, ylim=c(0, 0.4), breaks=50)
-  if(modes(fit)[["loglik"]] < -210){
-    stop("The modal log likelihood should be at least -210.")
-  }
+  #if(modes(fit)[["loglik"]] < -210){
+  #  stop("The modal log likelihood should be at least -210.")
+  #}
   plot.ts(logPrior(chains(fit)))
 #+end_src
 
-* Computing the marginal likelihood
+* Computing the batch likelihood
 ** Simple usage
 
 The following function computes the marginal likelihood using Chib's
@@ -191,7 +194,7 @@ object ~fit2~ or ~fit~ because the chains in these 2 objects are
 identical. 
 
 #+BEGIN_SRC R :tangle scripts/batch_lik.R
-  ptheta.star <- .Call("marginal_theta", fit2)
+  ptheta.star <- marginal_theta_batch(fit2)
   (p.theta.rb <- log(mean(ptheta.star)))
 #+END_SRC
 
