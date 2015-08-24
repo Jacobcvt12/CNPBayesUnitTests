@@ -93,15 +93,17 @@ ways to extract modal ordinates.
 #+BEGIN_SRC R :tangle scripts/batch_lik.R
   modal.ordinates <- modes(fit)
   print(modal.ordinates)
+
   ## Update slots of the paramters in MarginalModel with the modal.ordinates
   fit2 <- useModes(fit)
-  identical(theta(fit2), modal.ordinates[["theta"]])
-  identical(sigma2(fit2), modal.ordinates[["sigma2"]])
+  identical(as.numeric(theta(fit2)), as.numeric(modal.ordinates[["theta"]]))
+  identical(as.numeric(sigma2(fit2)), as.numeric(modal.ordinates[["sigma2"]]))
+
   ## Find the modal.ordinate using argMax, which looks at log lik *
   ## prior for each MCMC iteration
   i <- argMax(fit)
   thetas <- theta(chains(fit))[i, ]
-  identical(thetas, modal.ordinates[["theta"]])
+  identical(as.numeric(thetas), as.numeric(modal.ordinates[["theta"]]))
 #+END_SRC
 
 *** Complete data log likelihood and log prior
@@ -237,8 +239,8 @@ We allow the user to run fewer MCMC iterations in the reduced Gibbs by
   mcmcParams(fit.psigma2, force=TRUE) <- mp.reduced
   ## I do not recall why z is not updated.
   ##fit.psigma2 <- .Call("permutedz_reduced1", object)
-  fit.psigma2 <- .Call("reduced_sigma", fit.psigma2)
-  p.sigma2 <- .Call("p_sigma_reduced", fit.psigma2)
+  fit.psigma2 <- reduced_sigma_batch(fit.psigma2)
+  p.sigma2 <- p_sigma_reduced_batch(fit.psigma2)
   p.sigma.rb <- log(mean(p.sigma2))
 #+END_SRC
 
