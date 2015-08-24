@@ -109,7 +109,7 @@ are given by
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
   loglik <- modes(fit)[["loglik"]]
   fit2 <- useModes(fit)
-  s2.loglik <- .Call("stageTwoLogLik", fit2)
+  s2.loglik <- stageTwoLogLik(fit2)
   logprior <- modes(fit)[["logprior"]]
 #+END_SRC
 
@@ -119,8 +119,8 @@ Alternatively, the data log likelihood calculation is implemented in
   ordinates:
 
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
-  (loglikC <- .Call("loglik", fit2))
-  stage2.loglik <- .Call("stageTwoLogLik", fit2)
+  (loglikC <- loglik(fit2))
+  stage2.loglik <- stageTwoLogLik(fit2)
   loglikC <- loglikC + stage2.loglik
 #+END_SRC
 
@@ -136,7 +136,7 @@ factored as $p(\sigma^2_0)p(\nu_0)p(\mu)p(\tau^2)p(\pi)$.
           log(dnorm(mu(fit2), CNPBayes:::mu.0(hypp), sqrt(CNPBayes:::tau2.0(hypp)))) +
               log(dgamma(1/tau2(fit2), 1/2*eta.0, 1/2*eta.0*m2.0)) +
                   log(gtools::ddirichlet(p(fit2), CNPBayes:::alpha(hypp)))
-  lpriorC <- .Call("compute_logprior", fit2)
+  lpriorC <- compute_logprior(fit2)
   checkIdentical(lpriorR, lpriorC)
 #+END_SRC
 
@@ -191,7 +191,7 @@ object ~fit2~ or ~fit~ because the chains in these 2 objects are
 identical. 
 
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
-  ptheta.star <- .Call("marginal_theta", fit2)
+  ptheta.star <- marginal_theta(fit2)
   (p.theta.rb <- log(mean(ptheta.star)))
 #+END_SRC
 
@@ -233,9 +233,9 @@ We allow the user to run fewer MCMC iterations in the reduced Gibbs by
   fit.psigma2 <- fit
   mcmcParams(fit.psigma2, force=TRUE) <- mp.reduced
   ## I do not recall why z is not updated.
-  ##fit.psigma2 <- .Call("permutedz_reduced1", object)
-  fit.psigma2 <- .Call("reduced_sigma", fit.psigma2)
-  p.sigma2 <- .Call("p_sigma_reduced", fit.psigma2)
+  ##fit.psigma2 <- permutedz_reduced1(object)
+  fit.psigma2 <- reduced_sigma(fit.psigma2)
+  p.sigma2 <- p_sigma_reduced(fit.psigma2)
   p.sigma.rb <- log(mean(p.sigma2))
 #+END_SRC
 
@@ -246,7 +246,7 @@ We allow the user to run fewer MCMC iterations in the reduced Gibbs by
 
   checkIdentical(theta(fit.psigma2), modes(fit)[["theta"]])
   identical(modes(fit.psigma2), modes(fit))
-  psigma.star <- .Call("p_sigma_reduced", fit.psigma2)
+  psigma.star <- p_sigma_reduced(fit.psigma2)
   (p.sigma.rb <- log(mean(psigma.star)))
 
 
@@ -306,9 +306,9 @@ with $\theta$ and $\sigma^2$ fixed was not run./
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
   fit.pi.star <- fit
   mcmcParams(fit.pi.star, force=TRUE) <- mp.reduced
-  fit.pi.star <- .Call("reduced_pi", fit.pi.star)
+  fit.pi.star <- reduced_pi(fit.pi.star)
   identical(modes(fit.pi.star), modes(fit))
-  p.pi.star <- .Call("p_pmix_reduced", fit.pi.star)
+  p.pi.star <- p_pmix_reduced(fit.pi.star)
   (p.pi.rb <- log(mean(p.pi.star)))
   ## check
   zz <- z(chains(fit.pi.star))
@@ -353,10 +353,10 @@ implemented in C++.
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
   fit.mustar <- fit
   mcmcParams(fit.mustar, force=TRUE) <- mp.reduced
-  fit.mustar <- .Call("reduced_mu", fit.mustar)
+  fit.mustar <- reduced_mu(fit.mustar)
   identical(modes(fit.mustar), modes(fit))
   ##tau2s <- tau2(chains(fit.mustar))
-  p.mustar <- .Call("p_mu_reduced", fit.mustar)
+  p.mustar <- p_mu_reduced(fit.mustar)
   (p.mu.rb <- log(mean(p.mustar)))
 #+END_SRC
 
@@ -369,10 +369,10 @@ conditional (with constraints).
 #+BEGIN_SRC R
   fit.mustar <- fit
   mcmcParams(fit.mustar, force=TRUE) <- mp.reduced
-  fit.mustar <- .Call("reduced_mu", fit.mustar)
+  fit.mustar <- reduced_mu(fit.mustar)
   identical(modes(fit.mustar), modes(fit))
   ##tau2s <- tau2(chains(fit.mustar))
-  p.mustar <- .Call("p_mu_reduced", fit.mustar)
+  p.mustar <- p_mu_reduced(fit.mustar)
 
   median(mu(chains(fit.mustar))) ## mean of chain is strange...
   plot.ts(mu(chains(fit.mustar)))
@@ -441,9 +441,9 @@ conditional (with constraints).
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
   fit.taustar <- fit
   mcmcParams(fit.taustar, force=TRUE) <- mp.reduced
-  fit.taustar <- .Call("reduced_tau", fit.taustar)
+  fit.taustar <- reduced_tau(fit.taustar)
   identical(modes(fit.taustar), modes(fit))
-  p.taustar <- .Call("p_tau_reduced", fit.mustar)
+  p.taustar <- p_tau_reduced(fit.taustar)
   ##
   ## There is only 1 value for p.taustar -- we did not need a chain.
   ## 'reduced_tau' may be unnecessary
@@ -481,9 +481,9 @@ conditional (with constraints).
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
   fit.nu0star <- fit
   mcmcParams(fit.nu0star, force=TRUE) <- mp.reduced
-  fit.nu0star <- .Call("reduced_nu0", fit.nu0star)
+  fit.nu0star <- reduced_nu0(fit.nu0star)
   identical(modes(fit.nu0star), modes(fit))
-  p.nu0star <- .Call("p_nu0_reduced", fit.nu0star)
+  p.nu0star <- p_nu0_reduced(fit.nu0star)
   (p.nu0.rb <- log(mean(p.nu0star)))
 #+END_SRC
 
@@ -497,8 +497,8 @@ conditional (with constraints).
 #+BEGIN_SRC R :tangle scripts/marginal_lik.R
   fit.s20star <- fit
   mcmcParams(fit.s20star, force=TRUE) <- mp.reduced
-  fit.s20star <- .Call("reduced_s20", fit.s20star)
-  p.s20star <- .Call("p_s20_reduced", fit.s20star)
+  fit.s20star <- reduced_s20(fit.s20star)
+  p.s20star <- p_s20_reduced(fit.s20star)
   p.s20.rb <- log(p.s20star)
 #+END_SRC
 
@@ -572,7 +572,7 @@ are given by
 #+BEGIN_SRC R :tangle scripts/batch_lik.R
   loglik <- modes(bmodel)[["loglik"]]
   bmodel2 <- useModes(bmodel)
-  s2.loglik <- .Call("stageTwoLogLikBatch", bmodel2)
+  s2.loglik <- stageTwoLogLikBatch(bmodel2)
   complete.loglik <- loglik + s2.loglik
   logprior <- modes(bmodel2)[["logprior"]]
   loglikAndPrior <- complete.loglik + logprior
@@ -604,7 +604,7 @@ identical.
 
 #+BEGIN_SRC R :tangle scripts/batch_lik.R
   ## check:  values at or near zero
-  ptheta.star <- .Call("marginal_theta_batch", bmodel2)
+  ptheta.star <- marginal_theta_batch(bmodel2)
   (p.theta.rb <- log(mean(ptheta.star)))
 #+END_SRC
 
@@ -646,9 +646,9 @@ We allow the user to run fewer MCMC iterations in the reduced Gibbs by
   fit.psigma2 <- fit
   mcmcParams(fit.psigma2, force=TRUE) <- mp.reduced
   ## I do not recall why z is not updated.
-  ##fit.psigma2 <- .Call("permutedz_reduced1", object)
-  fit.psigma2 <- .Call("reduced_sigma", fit.psigma2)
-  p.sigma2 <- .Call("p_sigma_reduced", fit.psigma2)
+  ##fit.psigma2 <- permutedz_reduced1(object)
+  fit.psigma2 <- reduced_sigma(fit.psigma2)
+  p.sigma2 <- p_sigma_reduced(fit.psigma2)
   p.sigma.rb <- log(mean(p.sigma2))
 #+END_SRC
 
@@ -659,7 +659,7 @@ We allow the user to run fewer MCMC iterations in the reduced Gibbs by
 
   checkIdentical(theta(fit.psigma2), modes(fit)[["theta"]])
   identical(modes(fit.psigma2), modes(fit))
-  psigma.star <- .Call("p_sigma_reduced", fit.psigma2)
+  psigma.star <- p_sigma_reduced(fit.psigma2)
   (p.sigma.rb <- log(mean(psigma.star)))
 
 
@@ -719,9 +719,9 @@ with $\theta$ and $\sigma^2$ fixed was not run./
 #+BEGIN_SRC R :tangle scripts/batch_lik.R
   fit.pi.star <- fit
   mcmcParams(fit.pi.star, force=TRUE) <- mp.reduced
-  fit.pi.star <- .Call("reduced_pi", fit.pi.star)
+  fit.pi.star <- reduced_pi(fit.pi.star)
   identical(modes(fit.pi.star), modes(fit))
-  p.pi.star <- .Call("p_pmix_reduced", fit.pi.star)
+  p.pi.star <- p_pmix_reduced(fit.pi.star)
   (p.pi.rb <- log(mean(p.pi.star)))
   ## check
   zz <- z(chains(fit.pi.star))
