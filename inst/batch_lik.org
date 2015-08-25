@@ -330,21 +330,6 @@ implemented in C++.
   (p.tau.rb <- log(p.taustar))
 #+END_SRC
 
-**** COMMENT Verify p(\tau^2| ...)
-
-#+BEGIN_SRC R
-  tau2star <- modes(fit)[["tau2"]]
-  mustar <- modes(fit)[["mu"]]
-  K <- 3
-  eta0 <- eta.0(hypp)
-  etak <- eta0+K
-  m20 <- m2.0(hypp)
-
-  s2.k <- sum((thetastar - mustar)^2)
-  m2.k <- 1/etak * (eta0 * m20 + s2.k)
-  p.tau <- dgamma(1/tau2star, 1/2*etak, 1/2*etak*m2.k)
-#+END_SRC
-
 #+BEGIN_SRC R 
   (m.y <- loglikAndPrior - (p.theta.rb + p.sigma.rb + p.pi.rb + p.mu.rb + p.tau.rb))
 #+END_SRC
