@@ -261,9 +261,9 @@ with $\theta$ and $\sigma^2$ fixed was not run./
 #+BEGIN_SRC R :tangle scripts/batch_lik.R
   fit.pi.star <- fit
   mcmcParams(fit.pi.star, force=TRUE) <- mp.reduced
-  fit.pi.star <- .Call("reduced_pi", fit.pi.star)
+  fit.pi.star <- reduced_pi_batch(fit.pi.star)
   identical(modes(fit.pi.star), modes(fit))
-  p.pi.star <- .Call("p_pmix_reduced", fit.pi.star)
+  p.pi.star <- p_pmix_reduced_batch(fit.pi.star)
   (p.pi.rb <- log(mean(p.pi.star)))
   ## check
   zz <- z(chains(fit.pi.star))
@@ -308,10 +308,10 @@ implemented in C++.
 #+BEGIN_SRC R :tangle scripts/batch_lik.R
   fit.mustar <- fit
   mcmcParams(fit.mustar, force=TRUE) <- mp.reduced
-  fit.mustar <- .Call("reduced_mu", fit.mustar)
+  fit.mustar <- reduced_mu_batch(fit.mustar)
   identical(modes(fit.mustar), modes(fit))
   ##tau2s <- tau2(chains(fit.mustar))
-  p.mustar <- .Call("p_mu_reduced", fit.mustar)
+  p.mustar <- p_mu_reduced_batch(fit.mustar)
   (p.mu.rb <- log(mean(p.mustar)))
 #+END_SRC
 
