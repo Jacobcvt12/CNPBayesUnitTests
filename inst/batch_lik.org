@@ -320,9 +320,9 @@ implemented in C++.
 #+BEGIN_SRC R :tangle scripts/batch_lik.R
   fit.taustar <- fit
   mcmcParams(fit.taustar, force=TRUE) <- mp.reduced
-  fit.taustar <- .Call("reduced_tau", fit.taustar)
+  fit.taustar <- reduced_tau_batch(fit.taustar)
   identical(modes(fit.taustar), modes(fit))
-  p.taustar <- .Call("p_tau_reduced", fit.mustar)
+  p.taustar <- p_tau_reduced_batch(fit.taustar)
   ##
   ## There is only 1 value for p.taustar -- we did not need a chain.
   ## 'reduced_tau' may be unnecessary
