@@ -363,7 +363,7 @@ implemented in C++.
   mcmcParams(fit.s20star, force=TRUE) <- mp.reduced
   fit.s20star <- reduced_s20_batch(fit.s20star)
   p.s20star <- p_s20_reduced(fit.s20star)
-  p.s20.rb <- log(p.s20star)
+  (p.s20.rb <- log(p.s20star))
 #+END_SRC
 
 #+BEGIN_SRC R
