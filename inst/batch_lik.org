@@ -29,7 +29,7 @@ Correct the 78th observation:
   ##  galaxies <- c(galaxies, 5607)
 #+END_SRC
 
-* Marginal model
+* Batch model
 ** Fit mixture model
 
 Start by fitting the 3 component mixture model
@@ -44,24 +44,19 @@ Start by fitting the 3 component mixture model
                       mcmc.params=mp)
   fit <- posteriorSimulation(model)
   dm <- plot(fit, ylim=c(0, 0.4), breaks=50)
-  #if(modes(fit)[["loglik"]] < -210){
-  #  stop("The modal log likelihood should be at least -210.")
-  #}
   plot.ts(logPrior(chains(fit)))
 #+end_src
 
 * Computing the batch likelihood
 ** Simple usage
 
-The following function computes the marginal likelihood using Chib's
+The following function computes the batch likelihood using Chib's
 method with bias correction.  The second argument to
-~marginalLikelihood~ is the number of iterations used in the reduced
+~batchLikelihood~ is the number of iterations used in the reduced
 Gibb's samplers.
 
 #+BEGIN_SRC R :tangle scripts/batch_lik.R :session *R* :exports both
-  (m.y <- marginalLikelihood(fit, 1000))
-  published.mlik <- -226.791  
-  round(abs(m.y - published.mlik), 2)
+  (m.y <- batchLikelihood(fit, 1000))
 #+END_SRC
 
 #+RESULTS:
@@ -156,19 +151,6 @@ of the model is given by $p(\theta | \mu, \tau) p(\sigma^2 | \nu_0,
                            dgamma(1/sigma2(fit2), 1/2*n0, 1/2*n0*sigma2.0)))
   loglikAndPrior <- loglik + logprior
 #+END_SRC
-
-*** Estimation of p(\psi^* | y)
-
-
-The difference in the first two terms of the expression for the
-marginal density (that includes the second stage likelihood) and the
-tabled value for the true log marginal density should correspond to
-the true posterior probability at the modal ordinates $\psi^*$.
-
-#+BEGIN_SRC R :tangle scripts/batch_lik.R
-  true.posterior <- loglikAndPrior - published.mlik  
-#+END_SRC
-
 
 *** Block updates
 
@@ -387,230 +369,3 @@ implemented in C++.
   all(matrixStats::rowSds(pstar) < 0.1)
   m.y <- marginalLikelihood(fit, 1000)
 #+END_SRC
-
-*** Speed improvement
-
-- do not store the chains in the reduced Gibb's
-- do not permute the z-labels.  If we do, do it outside the
-  computation of the marginal density.  Only reasonable time to do
-  this is if there is not a clear winner.
-
-* Batch model
-
-Simulate a batch effect in the galaxy data.
-
-** Construct BatchModel object and run Gibb's sampler
-#+BEGIN_SRC R :noweb yes :tangle scripts/batch_lik.R
-  <<load_packages>>
-  <<galaxy_data>>
-  galaxies2 <- c(galaxies, galaxies + 5000)
-  batch <- rep(1:2, each=length(galaxies))
-  mp <- McmcParams(thin=10, iter=1000, burnin=10000, nStarts=20)
-  ##
-  ## Must make the priors much more uninformative
-  ##
-  hypp <- Hyperparameters(type="batch", k=3, m2.0=6, eta.0=1.8)
-  model <- BatchModel(data=galaxies2/1000,
-                      batch=batch,
-                      k=3,
-                      hypp=hypp,
-                      mcmc.params=mp)
-  bmodel <- posteriorSimulation(model)
-  plot(bmodel, breaks=80)
-#+END_SRC   
-
-** Compute the log likelihood and the log prior
-
-The log likelihood and log prior are straightforward to compute and we
-evaluate each at the modal ordinates, $\psi^*$.  
-
-#+BEGIN_SRC R 
-  modal.ordinates <- modes(fit)
-#+END_SRC
-
-*** Complete data log likelihood and log prior
-
-The complete data log likelihood and log prior at the modal ordinates
-are given by 
-
-#+BEGIN_SRC R :tangle scripts/batch_lik.R
-  loglik <- modes(bmodel)[["loglik"]]
-  bmodel2 <- useModes(bmodel)
-  s2.loglik <- .Call("stageTwoLogLikBatch", bmodel2)
-  complete.loglik <- loglik + s2.loglik
-  logprior <- modes(bmodel2)[["logprior"]]
-  loglikAndPrior <- complete.loglik + logprior
-#+END_SRC
-
-*** Block updates
-
-The objective is to estimate $p(\theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*, \nu_0^*, \sigma_0^{2*} | y)$,
-which can be expressed as
-
-$$  p(\theta^* | y ) p(\sigma^{2*} | y, \theta^*) p(\pi^* | y, \theta^*, \sigma^{2*}) p(\mu^* | y, \theta^*, \sigma^{2*}, \pi^*)p(\tau^*| \theta^*, \sigma^{2*}, \pi^*, \mu^*) 
-p(\tau^*| \theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*) p(\nu_0^*| \theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*)p(\sigma_0^{2*}| \theta^*, \sigma^{2*}, \pi^*, \mu^*, \tau^*, \nu_0^*)
-$$
-
-The first term is
-
-$$ p(\theta^* | y ) = \int p(\theta^* | y, \sigma^2, \pi, z, \ldots) p(\sigma^2, \pi, z | y, \ldots)d(\sigma^2, \mu, \pi, z, \dots)$$
-
-**** Estimation of p(\theta^* | y)
-
-An estimate for the first term is obtained by taking an ergodic average of
-
-$$p(\theta^* | y, \sigma^{2(s)}, z^{(s)}),$$
-
-using the posterior draws of (\sigma^2, \pi, z). No additional MCMC is
-required for this estimate.  It does not matter whether we pass the
-object ~fit2~ or ~fit~ because the chains in these 2 objects are
-identical. 
-
-#+BEGIN_SRC R :tangle scripts/batch_lik.R
-  ## check:  values at or near zero
-  ptheta.star <- .Call("marginal_theta_batch", bmodel2)
-  (p.theta.rb <- log(mean(ptheta.star)))
-#+END_SRC
-
-**** COMMENT Estimation of $p(\sigma^{2*} | y, \theta^*)$
-
-Note
-
-$$p(\sigma^{2*} | y, \theta^*)  = \int p(\sigma^{2*} | y, \theta^*, \pi, z) p(\pi, z | y, \theta^*)d\pi dz.$$ 
-
-To estimate $p(\sigma^{2*} | y)$, we take an ergodic average of
-$p(\sigma^{2*} | y, \pi^{(s)}, z^{(s)})$ using draws of (\pi, z) from
-a **reduced** Gibb's sampler. ** It is important to have draws of $z$
-from [z | y, \theta*] (not [z | y]) and draws of $\pi$ from [\pi | y,
-\theta*].
-
-We allow the user to run fewer MCMC iterations in the reduced Gibbs by
- specifying an integer value for the argument $T2$ of the
- ~computeMarginalLik~ function.  The C++ function for the reduced
- Gibb's is called below.
-
-**Refactoring needed:** 
-
-- /This function is poorly named. Not sure why 'permutedz' is in the
-  name/.
-
-- Much of the code in ~.pthetastar~ is for permuting the modes.  This
-  should be removed from estimation of the marginal density.  In
-  particular, we should calculate the marginal density for whatever
-  ordering of modes is passed in the MarginalModel object.  Permuting
-  to a different set of modes would be a method defined for marginal
-  model that is irrelevant for the computation of Gibb's.
-
-- Check whether any of the methods for running the reduced Gibb's are
-  outdated and can be removed
-
-#+BEGIN_SRC R :tangle scripts/batch_lik.R
-  T <- 500
-  mp.reduced <- McmcParams(iter=T, thin=2, burnin=0)
-  fit.psigma2 <- fit
-  mcmcParams(fit.psigma2, force=TRUE) <- mp.reduced
-  ## I do not recall why z is not updated.
-  ##fit.psigma2 <- .Call("permutedz_reduced1", object)
-  fit.psigma2 <- .Call("reduced_sigma", fit.psigma2)
-  p.sigma2 <- .Call("p_sigma_reduced", fit.psigma2)
-  p.sigma.rb <- log(mean(p.sigma2))
-#+END_SRC
-
-***** COMMENT Debugging small values in p(sigma^* | ...)
-#+BEGIN_SRC R
-  plot(fit.psigma2, breaks=50, ylim=c(0, 0.4))
-  plot.ts(sigma2.0(chains(fit.psigma2)))
-
-  checkIdentical(theta(fit.psigma2), modes(fit)[["theta"]])
-  identical(modes(fit.psigma2), modes(fit))
-  psigma.star <- .Call("p_sigma_reduced", fit.psigma2)
-  (p.sigma.rb <- log(mean(psigma.star)))
-
-
-  sigma2star <- modes(fit)[["sigma2"]]
-  thetastar <- modes(fit)[["theta"]]
-  prec <- 1/sigma2star
-  Z <- z(chains(fit.psigma2))
-  K <- 3
-  s20chain <- sigma2.0(chains(fit.psigma2))
-  nu0chain <- nu.0(chains(fit.psigma2))
-  x <- y(fit.psigma2)
-
-
-
-  ## the density estimates for the component variances gets very small
-  ## because sigma2.0 gets very small.  sigma2.0 should not get very
-  ## small as a result of fixing theta.
-  S <- iter(fit.psigma2)
-  p_prec <- rep(NA, S)
-  for(s in 1:S){
-    ##for(int s=0; s < S; ++s){
-    zz = Z[s, ]
-    nn = tableZ(K, zz) ;
-    s20 = s20chain[s] ;
-    nu0 = nu0chain[s] ;
-
-    ss <- rep(NA, K)
-    for(k in 1:K){
-      ss[k] <- sum((x[zz==k] - thetastar[k])^2)
-    }
-    total <- 1
-    nu.n <- nu0 + nn
-    sigma2.n = 1/nu.n*(nu0*s20 + ss) ;
-    d <- rep(NA, K)
-    for(k in 1:K){
-      d[k] <- dgamma(prec[k], 0.5*nu.n[k], 0.5*nu.n[k]*sigma2.n[k])
-    }
-    p_prec[s] <- prod(d)
-  }
-#+END_SRC
-
-**** Estimation of $p(\pi^* | y, \theta^*, \sigma^{2*})$  
-
-We write the third term as
-
-$$p(\pi^{*} | y, \theta^*, \sigma^{2*})  = \int p(\pi^* | y, \theta^*, \sigma^{2*}, z) p(z | y, \theta^*, \sigma^{2*})dz.$$ 
-
-To estimate $p(\pi^{*} | y)$, we take an ergodic average of
-$p(\pi^{*} | y, \theta^*, \sigma^{2*}, z^{(s)})$ using draws of $z
-from a **reduced** Gibb's sampler. The draws of $z$ are from [z | y,
-\theta^*, \sigma^{2*}]. The C function for simulating from [z|theta^*,
-\sigma^{2*}] is implemented in C+++.
-
-// It appears that in the current implementation, a reduced Gibb's
-with $\theta$ and $\sigma^2$ fixed was not run./
-
-#+BEGIN_SRC R :tangle scripts/batch_lik.R
-  fit.pi.star <- fit
-  mcmcParams(fit.pi.star, force=TRUE) <- mp.reduced
-  fit.pi.star <- .Call("reduced_pi", fit.pi.star)
-  identical(modes(fit.pi.star), modes(fit))
-  p.pi.star <- .Call("p_pmix_reduced", fit.pi.star)
-  (p.pi.rb <- log(mean(p.pi.star)))
-  ## check
-  zz <- z(chains(fit.pi.star))
-  gtools::ddirichlet(modes(fit)[["mixprob"]], alpha(hypp) + table(zz[2,]))
-  mp <- modes(fit)[["mixprob"]]
-  ztab <- tableZ(3, z(fit))
-  ##ddirichlet(mp, 1+ztab)
-#+END_SRC
-
-** COMMENT Computing the marginal density
-
-Since ~p.theta.rb~, ~p.sigma2.rb~, and ~p.pi.rb~ are already on the
-log scale, the Chib's estimate of the marginal density (log-scale) is
-given by
-
-#+BEGIN_SRC R :tangle scripts/batch_lik.R
-  m.y <- loglikAndPrior - (p.theta.rb + p.sigma.rb + p.pi.rb)
-#+END_SRC
-
-Bias correction and comparison to published value:
-
-#+BEGIN_SRC R :tangle scripts/batch_lik.R
-  m.bc <- m.y + log(factorial(3))
-  m.bc - published.mlik
-#+END_SRC
-
-
-
