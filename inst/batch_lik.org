@@ -345,9 +345,9 @@ implemented in C++.
 #+BEGIN_SRC R :tangle scripts/batch_lik.R
   fit.nu0star <- fit
   mcmcParams(fit.nu0star, force=TRUE) <- mp.reduced
-  fit.nu0star <- .Call("reduced_nu0", fit.nu0star)
+  fit.nu0star <- reduced_nu0_batch(fit.nu0star)
   identical(modes(fit.nu0star), modes(fit))
-  p.nu0star <- .Call("p_nu0_reduced", fit.nu0star)
+  p.nu0star <- p_nu0_reduced_batch(fit.nu0star)
   (p.nu0.rb <- log(mean(p.nu0star)))
 #+END_SRC
 
