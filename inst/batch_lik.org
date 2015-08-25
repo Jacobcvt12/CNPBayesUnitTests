@@ -25,7 +25,7 @@ Correct the 78th observation:
 
 #+BEGIN_SRC R :tangle scripts/batch_lik.R :session *R*
   galaxies[78] <- 26960
-  galaxies <- c(galaxies, galaxies + 500)
+  galaxies <- c(galaxies, galaxies + 5000)
   ##  galaxies <- c(galaxies, 5607)
 #+END_SRC
 
@@ -240,7 +240,7 @@ We allow the user to run fewer MCMC iterations in the reduced Gibbs by
   ##fit.psigma2 <- .Call("permutedz_reduced1", object)
   fit.psigma2 <- reduced_sigma_batch(fit.psigma2)
   p.sigma2 <- p_sigma_reduced_batch(fit.psigma2)
-  p.sigma.rb <- log(mean(p.sigma2))
+  (p.sigma.rb <- log(mean(p.sigma2)))
 #+END_SRC
 
 ***** COMMENT Debugging small values in p(sigma^* | ...)
