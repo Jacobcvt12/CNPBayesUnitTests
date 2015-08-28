@@ -20,7 +20,7 @@ test_compare_galaxy_batch <- function() {
                         posteriorSimulation(model, k=4),
                         posteriorSimulation(model, k=5))
 
-    lik.batch <- batchLikelihood(mlist.batch)
+    lik.batch <- marginalLikelihood(mlist.batch)
 
     hypp <- Hyperparameters(type="marginal", k=2, m2.0=100)
 
