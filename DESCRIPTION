@@ -5,10 +5,10 @@ Version: 0.0.08
 Maintainer: Jacob Carey <jcarey15@jhu.edu>
 Description: Bayesian hierarchical mixture models for batch effects and copy
     number.
-Date: Tue Sep 22 21:48:49 EDT 2015
-Author: Stephen Cristiano, Robert Scharpf, and Jacob Carey
+Date: Tue Sep 22 21:55:18 EDT 2015
+Author:  Jacob Carey, Stephen Cristiano, and Robert Scharpf
 Depends: 
-    CNPBayes (>= 0.0.113)
+    CNPBayes (>= 0.99.1)
 Suggests: 
     knitr,
     BSgenome.Hsapiens.UCSC.hg19,

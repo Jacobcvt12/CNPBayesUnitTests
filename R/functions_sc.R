@@ -709,17 +709,17 @@ logLikPhi <- function(object){
   sum(log(p.theta)) + sum(log(p.sigma2))
 }
 
-setMethod("computePrior", "BatchModel", function(object){
-  compute_logprior_batch(object)
-##   hypp <- hyperParams(object)
-##   K <- k(hypp)
-##   tau2s <- tau2(object)
-##   mus <- mu(object)
-##   p.mu <- dnorm(mus, mu.0(hypp), sqrt(tau2.0(hypp)))
-##   p.sigma2.0 <- dgamma(sigma2.0(object), shape=a(hypp), rate=b(hypp))
-##   p.nu.0 <- dgeom(as.integer(nu.0(object)), betas(hypp))
-##   sum(log(p.mu)) + log(p.sigma2.0) + log(p.nu.0)
-})
+##setMethod("computePrior", "BatchModel", function(object){
+##  compute_logprior_batch(object)
+####   hypp <- hyperParams(object)
+####   K <- k(hypp)
+####   tau2s <- tau2(object)
+####   mus <- mu(object)
+####   p.mu <- dnorm(mus, mu.0(hypp), sqrt(tau2.0(hypp)))
+####   p.sigma2.0 <- dgamma(sigma2.0(object), shape=a(hypp), rate=b(hypp))
+####   p.nu.0 <- dgeom(as.integer(nu.0(object)), betas(hypp))
+####   sum(log(p.mu)) + log(p.sigma2.0) + log(p.nu.0)
+##})
 
 
 
@@ -753,10 +753,10 @@ setMethod("computePrior", "BatchModel", function(object){
   ll.data
 }
 
-setMethod("computePrior", "MarginalModel", function(object){
-  ##  .compute_prior_marginal(object)
-  compute_logprior(object)
-})
+##setMethod("computePrior", "MarginalModel", function(object){
+##  ##  .compute_prior_marginal(object)
+##  compute_logprior(object)
+##})
 
 .compute_prior_marginal <- function(object){
   hypp <- hyperParams(object)
