@@ -1,4 +1,4 @@
-test_simulation <- function(){
+test_that("simulation", {
   ##library(devtools)
   ##load_all()
   arguments <- list("sl.good" = 6.25, ## separation parameter for "good" probes
@@ -24,18 +24,13 @@ test_simulation <- function(){
   if(FALSE)
     hist(pc, breaks=100, col="gray", border="gray")
 
-  x <- computeMarginalLik(pc, nchains=3,
-                          T=1000, T2=500,
-                          burnin=200,
-                          K=1:4)
-  models <- orderModels(x)
-  mp <- map(models[[1]])
-  checkTrue(k(models)[1] >= 3)
-  ##bf <- logBayesFactor(x)
-  ##checkTrue(names(bf) == "M3-M2")
-  ##checkTrue(bf > 100)
-  if(FALSE){
-    mcmcParams(model) <- mp
-    model <- posteriorSimulation(model)
-  }
+  mp <- McmcParams(iter=1000, nStarts=10, burnin=1000, thin=5)
+  model <- MarginalModel(data=pc, k=2,
+                         mcmc.params=mp)
+  singlebatch.models <- list(posteriorSimulation(model, k=1),
+                             posteriorSimulation(model, k=2),
+                             posteriorSimulation(model, k=3),
+                             posteriorSimulation(model, k=4))
+  ml <- marginalLikelihood(singlebatch.models)
+  expect_true(which.max(ml) >= 3)
 }
