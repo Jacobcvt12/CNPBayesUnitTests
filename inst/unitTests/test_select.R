@@ -1,3 +1,28 @@
+test_marginal_galaxy <- function(){
+  library(MASS)
+  data(galaxies)
+  set.seed(42)
+  galaxies[78] <- 26960
+  hypp <- Hyperparameters(type="marginal", k=3, m2.0=100)
+  model <- MarginalModel(data=galaxies / 1000, k=3,
+                         hypp=hypp,
+                         mcmc.params=mp)
+  model <- posteriorSimulation(model)
+  lik.marginal <- marginalLikelihood(model, 1000L)
+  checkEquals(lik.marginal, -227, tolerance=1.5)
+}
+
+test_singlebatch_pooledvar <- function(){
+  library(MASS)
+  data(galaxies)
+  set.seed(42)
+  galaxies[78] <- 26960
+  hypp <- Hyperparameters(type="marginal", k=3, m2.0=100)
+  model <- SingleBatchPooledVar(data=galaxies / 1000, k=3,
+                                hypp=hypp,
+                                mcmc.params=mp)
+}
+
 test_compare_galaxy_batch <- function() {
     library(MASS)
     data(galaxies)
