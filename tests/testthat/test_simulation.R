@@ -33,4 +33,4 @@ test_that("simulation", {
                              posteriorSimulation(model, k=4))
   ml <- marginalLikelihood(singlebatch.models)
   expect_true(which.max(ml) >= 3)
-}
+})
