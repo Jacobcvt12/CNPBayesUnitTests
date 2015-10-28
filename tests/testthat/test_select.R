@@ -1,4 +1,4 @@
-test_that("marginal_galaxy"{
+test_that("marginal_galaxy", {
   library(MASS)
   data(galaxies)
   set.seed(42)
@@ -16,7 +16,7 @@ test_that("marginal_galaxy"{
   expect_equal(lik.marginal, -227, tolerance=1)
 })
 
-test_that("full_theta_pooled"{
+test_that("full_theta_pooled", {
   library(MASS)
   data(galaxies)
   set.seed(42)
@@ -61,7 +61,7 @@ test_that("full_theta_pooled"{
   expect_equal(p_theta, p.thetas.cpp[1:500])
 })
 
-test_that("reduced_sigma_pooled"{
+test_that("reduced_sigma_pooled", {
   library(MASS)
   data(galaxies)
   set.seed(42)
@@ -105,7 +105,7 @@ test_that("reduced_sigma_pooled"{
 })
 
 
-test_that("marginalLikelihoodPooledVar"{
+test_that("marginalLikelihoodPooledVar", {
   library(MASS)
   data(galaxies)
   set.seed(42)
@@ -133,9 +133,23 @@ test_that("marginalLikelihoodPooledVar"{
   expect_equal(ml.cpp, m.y, tolerance=0.01)
   published.ml <- -226.803
   expect_equal(ml.cpp, published.ml, tolerance=1)
+
+
+  ## 2 components, equal variance
+  set.seed(123)
+  hypp <- Hyperparameters(type="marginal", k=2, m2.0=100, mu.0=20)
+  mp <- McmcParams(iter=1000, burnin=2000, thin=10, nStarts=10)
+  model <- CNPBayes:::SingleBatchPooledVar(data=galaxies / 1000, k=2,
+                                           hypp=hypp,
+                                           mcmc.params=mp)
+  model <- CNPBayes:::posteriorSimulationPooled(model, iter=1000,
+                                                burnin=5000, thin=10)
+  set.seed(123)
+  (ml.cpp <- marginalLikelihood(model))
+  expect_equal(ml.cpp, expect=-239.764, tolerance=0.1)
 })
 
-test_that("marginalLikelihoodPooledVar"{
+test_that("marginalLikelihoodPooledVar", {
   library(MASS)
   data(galaxies)
   set.seed(42)
@@ -168,7 +182,7 @@ test_that("marginalLikelihoodPooledVar"{
 
 
 
-test_that("compare_galaxy_batch"{
+test_that("compare_galaxy_batch", {
   library(MASS)
   data(galaxies)
   set.seed(42)

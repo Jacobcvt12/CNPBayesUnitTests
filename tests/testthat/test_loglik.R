@@ -1,4 +1,4 @@
-test_that("senseless_batch"{
+test_that("senseless_batch", {
   set.seed(2000)
   library(oligoClasses)
   truth <- simulateData(N=2500,
@@ -23,4 +23,4 @@ test_that("senseless_batch"{
     checkTrue(is(m2$models, "BatchModelList"))
     checkTrue(k(orderModels(m2))[1]==3)
   }
-}
+})
